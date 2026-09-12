@@ -14,7 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_files: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          path: string
+          project_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          path: string
+          project_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          path?: string
+          project_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          entry_file: string
+          id: string
+          is_public: boolean
+          language: string
+          name: string
+          owner_id: string
+          run_count: number
+          share_slug: string
+          template: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entry_file?: string
+          id?: string
+          is_public?: boolean
+          language?: string
+          name?: string
+          owner_id: string
+          run_count?: number
+          share_slug?: string
+          template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entry_file?: string
+          id?: string
+          is_public?: boolean
+          language?: string
+          name?: string
+          owner_id?: string
+          run_count?: number
+          share_slug?: string
+          template?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          exit_code: number | null
+          id: string
+          language: string
+          project_id: string | null
+          stderr: string
+          stdout: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          exit_code?: number | null
+          id?: string
+          language: string
+          project_id?: string | null
+          stderr?: string
+          stdout?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          exit_code?: number | null
+          id?: string
+          language?: string
+          project_id?: string | null
+          stderr?: string
+          stdout?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
