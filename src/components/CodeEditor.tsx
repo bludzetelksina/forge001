@@ -59,7 +59,7 @@ export default function CodeEditor({
       theme={oneDark}
       readOnly={readOnly}
       extensions={extensionsFor(language)}
-      onChange={onChange}
+      onChange={onChange ?? (() => undefined)}
       basicSetup={{
         lineNumbers: true,
         highlightActiveLine: true,
