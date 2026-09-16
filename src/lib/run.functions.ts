@@ -1,9 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { bundleProject } from "./bundle";
+
 const runSchema = z.object({
   runner: z.string().min(1).max(32),
-  source: z.string().max(200_000),
+  /** Language id used to pick the multi-file bundling strategy. */
+  language: z.string().min(1).max(32),
+  entry: z.string().min(1).max(256),
+  files: z
+    .array(z.object({ path: z.string().min(1).max(256), content: z.string().max(200_000) }))
+    .min(1)
+    .max(60),
+  packages: z
+    .array(z.object({ name: z.string().min(1).max(120), version: z.string().max(60).nullable() }))
+    .max(40)
+    .optional(),
   stdin: z.string().max(20_000).optional(),
 });
 
@@ -52,8 +64,16 @@ export const runCode = createServerFn({ method: "POST" })
 
     const started = Date.now();
 
+    const { source, notes } = bundleProject({
+      language: data.language,
+      entry: data.entry,
+      files: data.files,
+      packages: data.packages ?? [],
+    });
+    const notePrefix = notes.length ? `${notes.join("\n")}\n` : "";
+
     const createBody = new URLSearchParams({
-      source_code: data.source,
+      source_code: source,
       language: data.runner,
       input: data.stdin ?? "",
       longpoll: "true",
@@ -69,7 +89,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!createRes.ok) {
       return {
         stdout: "",
-        stderr: `The run service is unavailable right now (${createRes.status}). Try again in a moment.`,
+        stderr: `${notePrefix}The run service is unavailable right now (${createRes.status}). Try again in a moment.`,
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: false,
@@ -80,7 +100,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!created.id) {
       return {
         stdout: "",
-        stderr: created.error ?? "The run service rejected this request.",
+        stderr: notePrefix + (created.error ?? "The run service rejected this request."),
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: false,
@@ -115,7 +135,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!details) {
       return {
         stdout: "",
-        stderr: "The program took too long and was stopped.",
+        stderr: `${notePrefix}The program took too long and was stopped.`,
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: true,
@@ -123,9 +143,11 @@ export const runCode = createServerFn({ method: "POST" })
     }
 
     const buildFailed = details.result === "failure" && (details.build_stderr ?? "").length > 0;
-    const stderr = [buildFailed ? details.build_stderr : null, details.stderr]
-      .filter((part): part is string => Boolean(part && part.length))
-      .join("\n");
+    const stderr =
+      notePrefix +
+      [buildFailed ? details.build_stderr : null, details.stderr]
+        .filter((part): part is string => Boolean(part && part.length))
+        .join("\n");
 
     const exitRaw = buildFailed ? details.build_exit_code : details.exit_code;
     const exitCode = exitRaw != null && exitRaw !== "" ? Number(exitRaw) : null;
