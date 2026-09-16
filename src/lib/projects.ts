@@ -220,6 +220,16 @@ export async function renameFile(fileId: string, path: string) {
   if (error) throw error;
 }
 
+export async function duplicateFile(file: FileRow, path: string, sortOrder: number) {
+  const { data, error } = await supabase
+    .from("project_files")
+    .insert({ project_id: file.project_id, path, content: file.content, sort_order: sortOrder })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as FileRow;
+}
+
 export async function deleteFile(fileId: string) {
   const { error } = await supabase.from("project_files").delete().eq("id", fileId);
   if (error) throw error;
