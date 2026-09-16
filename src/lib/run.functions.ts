@@ -64,8 +64,16 @@ export const runCode = createServerFn({ method: "POST" })
 
     const started = Date.now();
 
+    const { source, notes } = bundleProject({
+      language: data.language,
+      entry: data.entry,
+      files: data.files,
+      packages: data.packages ?? [],
+    });
+    const notePrefix = notes.length ? `${notes.join("\n")}\n` : "";
+
     const createBody = new URLSearchParams({
-      source_code: data.source,
+      source_code: source,
       language: data.runner,
       input: data.stdin ?? "",
       longpoll: "true",
