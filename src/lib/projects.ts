@@ -39,6 +39,47 @@ export async function listProjects(): Promise<ProjectRow[]> {
   return (data ?? []) as ProjectRow[];
 }
 
+export type ProjectWithRole = ProjectRow & { role: "owner" | "editor" | "viewer" };
+
+/** Every project the signed-in person can open, tagged with what they may do. */
+export async function listProjectsWithRole(): Promise<ProjectWithRole[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? null;
+
+  const [projects, memberships] = await Promise.all([
+    listProjects(),
+    supabase.from("project_members").select("project_id, role").eq("status", "accepted"),
+  ]);
+
+  const roleByProject = new Map(
+    (memberships.data ?? []).map((row) => [row.project_id as string, row.role as "editor" | "viewer"]),
+  );
+
+  return projects.map((project) => ({
+    ...project,
+    role:
+      project.owner_id === userId
+        ? ("owner" as const)
+        : (roleByProject.get(project.id) ?? ("viewer" as const)),
+  }));
+}
+
+/** What the signed-in person may do in one project. */
+export async function getMyRole(project: ProjectRow): Promise<"owner" | "editor" | "viewer"> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? null;
+  if (userId && project.owner_id === userId) return "owner";
+  if (!userId) return "viewer";
+  const { data } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", project.id)
+    .eq("user_id", userId)
+    .eq("status", "accepted")
+    .maybeSingle();
+  return (data?.role as "editor" | "viewer" | undefined) ?? "viewer";
+}
+
 export async function getProject(id: string): Promise<ProjectRow> {
   const { data, error } = await supabase.from("projects").select("*").eq("id", id).single();
   if (error) throw error;
