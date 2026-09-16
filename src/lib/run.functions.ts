@@ -89,7 +89,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!createRes.ok) {
       return {
         stdout: "",
-        stderr: `The run service is unavailable right now (${createRes.status}). Try again in a moment.`,
+        stderr: `${notePrefix}The run service is unavailable right now (${createRes.status}). Try again in a moment.`,
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: false,
@@ -100,7 +100,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!created.id) {
       return {
         stdout: "",
-        stderr: created.error ?? "The run service rejected this request.",
+        stderr: notePrefix + (created.error ?? "The run service rejected this request."),
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: false,
@@ -135,7 +135,7 @@ export const runCode = createServerFn({ method: "POST" })
     if (!details) {
       return {
         stdout: "",
-        stderr: "The program took too long and was stopped.",
+        stderr: `${notePrefix}The program took too long and was stopped.`,
         exitCode: null,
         durationMs: Date.now() - started,
         timedOut: true,
@@ -143,9 +143,11 @@ export const runCode = createServerFn({ method: "POST" })
     }
 
     const buildFailed = details.result === "failure" && (details.build_stderr ?? "").length > 0;
-    const stderr = [buildFailed ? details.build_stderr : null, details.stderr]
-      .filter((part): part is string => Boolean(part && part.length))
-      .join("\n");
+    const stderr =
+      notePrefix +
+      [buildFailed ? details.build_stderr : null, details.stderr]
+        .filter((part): part is string => Boolean(part && part.length))
+        .join("\n");
 
     const exitRaw = buildFailed ? details.build_exit_code : details.exit_code;
     const exitCode = exitRaw != null && exitRaw !== "" ? Number(exitRaw) : null;
