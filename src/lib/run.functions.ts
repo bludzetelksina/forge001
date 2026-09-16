@@ -1,9 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { bundleProject } from "./bundle";
+
 const runSchema = z.object({
   runner: z.string().min(1).max(32),
-  source: z.string().max(200_000),
+  /** Language id used to pick the multi-file bundling strategy. */
+  language: z.string().min(1).max(32),
+  entry: z.string().min(1).max(256),
+  files: z
+    .array(z.object({ path: z.string().min(1).max(256), content: z.string().max(200_000) }))
+    .min(1)
+    .max(60),
+  packages: z
+    .array(z.object({ name: z.string().min(1).max(120), version: z.string().max(60).nullable() }))
+    .max(40)
+    .optional(),
   stdin: z.string().max(20_000).optional(),
 });
 
