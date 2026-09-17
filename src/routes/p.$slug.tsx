@@ -167,7 +167,13 @@ function SharedProject() {
               {spec?.runner ? (
                 <OutputConsole result={result} running={running} />
               ) : (
-                <WebPreview files={files.map((f) => ({ path: f.path, content: f.content }))} />
+                <WebPreview
+                  files={files.map((f) => ({ path: f.path, content: f.content }))}
+                  packages={(packagesQuery.data ?? []).map((p) => ({
+                    name: p.name,
+                    url: cdnUrlFor(p),
+                  }))}
+                />
               )}
             </div>
           </div>
