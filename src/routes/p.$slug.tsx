@@ -47,6 +47,12 @@ function SharedProject() {
     enabled: Boolean(project?.id),
   });
 
+  const packagesQuery = useQuery({
+    queryKey: ["shared-packages", project?.id],
+    queryFn: () => listPackages(project!.id),
+    enabled: Boolean(project?.id),
+  });
+
   const files: FileRow[] = filesQuery.data ?? [];
   const [activeId, setActiveId] = useState<string | null>(null);
   const [result, setResult] = useState<RunResult | null>(null);
