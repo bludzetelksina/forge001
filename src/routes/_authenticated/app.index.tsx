@@ -117,9 +117,9 @@ function Dashboard() {
         <div className="mt-8">
           {projects.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading your projects…</p>
-          ) : projects.data && projects.data.length > 0 ? (
+          ) : owned.length > 0 ? (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {projects.data.map((project) => (
+              {owned.map((project) => (
                 <li
                   key={project.id}
                   className="group rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
