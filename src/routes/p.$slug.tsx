@@ -9,6 +9,7 @@ import OutputConsole from "@/components/OutputConsole";
 import WebPreview from "@/components/WebPreview";
 import SiteHeader from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { cdnUrlFor, listPackages } from "@/lib/collab";
 import { editorLanguageFor, languageById } from "@/lib/languages";
 import { getProjectBySlug, listFiles, type FileRow } from "@/lib/projects";
 import { runCode, type RunResult } from "@/lib/run.functions";
