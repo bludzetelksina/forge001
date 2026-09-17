@@ -56,12 +56,20 @@ function SharedProject() {
   const active = files.find((f) => f.id === activeId) ?? files[0] ?? null;
 
   async function doRun() {
-    if (!project || !spec?.runner) return;
-    const entry = files.find((f) => f.path === project.entry_file) ?? files[0];
-    if (!entry) return;
+    if (!project || !spec?.runner || !files.length) return;
     setRunning(true);
     try {
-      setResult(await run({ data: { runner: spec.runner, source: entry.content } }));
+      setResult(
+        await run({
+          data: {
+            runner: spec.runner,
+            language: project.language,
+            entry: project.entry_file,
+            files: files.map((f) => ({ path: f.path, content: f.content })),
+            packages: (packagesQuery.data ?? []).map((p) => ({ name: p.name, version: p.version })),
+          },
+        }),
+      );
     } finally {
       setRunning(false);
     }
