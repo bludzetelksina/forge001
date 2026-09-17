@@ -177,6 +177,36 @@ function Dashboard() {
             </div>
           )}
         </div>
+
+        {shared.length > 0 ? (
+          <div className="mt-12">
+            <h2 className="text-lg font-bold">Shared with me</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Projects other people invited you to.
+            </p>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shared.map((project) => (
+                <li
+                  key={project.id}
+                  className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
+                >
+                  <Link to="/app/$projectId" params={{ projectId: project.id }} className="block">
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate font-mono text-sm font-semibold">{project.name}</h3>
+                      <span className="shrink-0 rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {project.role}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {languageById(project.language).label} ·{" "}
+                      {new Date(project.updated_at).toLocaleDateString()}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </main>
     </div>
   );
