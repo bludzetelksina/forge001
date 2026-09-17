@@ -40,7 +40,9 @@ function Dashboard() {
   const [name, setName] = useState("");
   const [language, setLanguage] = useState<LanguageId>("python");
 
-  const projects = useQuery({ queryKey: ["projects"], queryFn: listProjects });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: listProjectsWithRole });
+  const owned = (projects.data ?? []).filter((p) => p.role === "owner");
+  const shared = (projects.data ?? []).filter((p) => p.role !== "owner");
 
   const create = useMutation({
     mutationFn: () => createProjectFromTemplate(language, name),
