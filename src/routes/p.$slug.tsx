@@ -9,6 +9,7 @@ import OutputConsole from "@/components/OutputConsole";
 import WebPreview from "@/components/WebPreview";
 import SiteHeader from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { cdnUrlFor, listPackages } from "@/lib/collab";
 import { editorLanguageFor, languageById } from "@/lib/languages";
 import { getProjectBySlug, listFiles, type FileRow } from "@/lib/projects";
 import { runCode, type RunResult } from "@/lib/run.functions";
@@ -47,6 +48,12 @@ function SharedProject() {
     enabled: Boolean(project?.id),
   });
 
+  const packagesQuery = useQuery({
+    queryKey: ["shared-packages", project?.id],
+    queryFn: () => listPackages(project!.id),
+    enabled: Boolean(project?.id),
+  });
+
   const files: FileRow[] = filesQuery.data ?? [];
   const [activeId, setActiveId] = useState<string | null>(null);
   const [result, setResult] = useState<RunResult | null>(null);
@@ -56,12 +63,20 @@ function SharedProject() {
   const active = files.find((f) => f.id === activeId) ?? files[0] ?? null;
 
   async function doRun() {
-    if (!project || !spec?.runner) return;
-    const entry = files.find((f) => f.path === project.entry_file) ?? files[0];
-    if (!entry) return;
+    if (!project || !spec?.runner || !files.length) return;
     setRunning(true);
     try {
-      setResult(await run({ data: { runner: spec.runner, source: entry.content } }));
+      setResult(
+        await run({
+          data: {
+            runner: spec.runner,
+            language: project.language,
+            entry: project.entry_file,
+            files: files.map((f) => ({ path: f.path, content: f.content })),
+            packages: (packagesQuery.data ?? []).map((p) => ({ name: p.name, version: p.version })),
+          },
+        }),
+      );
     } finally {
       setRunning(false);
     }
@@ -152,7 +167,13 @@ function SharedProject() {
               {spec?.runner ? (
                 <OutputConsole result={result} running={running} />
               ) : (
-                <WebPreview files={files.map((f) => ({ path: f.path, content: f.content }))} />
+                <WebPreview
+                  files={files.map((f) => ({ path: f.path, content: f.content }))}
+                  packages={(packagesQuery.data ?? []).map((p) => ({
+                    name: p.name,
+                    url: cdnUrlFor(p),
+                  }))}
+                />
               )}
             </div>
           </div>
