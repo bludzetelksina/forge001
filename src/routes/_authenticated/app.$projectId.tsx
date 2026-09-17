@@ -4,29 +4,34 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
   ChevronLeft,
-  FilePlus2,
   Globe,
   Loader2,
   Monitor,
-  Pencil,
   Play,
   Terminal,
-  Trash2,
+  Users,
 } from "lucide-react";
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 
+import FileTree from "@/components/FileTree";
+import MembersPanel from "@/components/MembersPanel";
 import OutputConsole from "@/components/OutputConsole";
+import PackagesPanel from "@/components/PackagesPanel";
 import WebPreview from "@/components/WebPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { cdnUrlFor, listMembers, listPackages } from "@/lib/collab";
 import { editorLanguageFor, languageById } from "@/lib/languages";
 import {
   createFile,
   deleteFile,
+  duplicateFile,
+  getMyRole,
   getProject,
   listFiles,
   recordRun,
@@ -53,6 +58,8 @@ export const Route = createFileRoute("/_authenticated/app/$projectId")({
   component: Workspace,
 });
 
+type SidePanel = "files" | "packages" | "members";
+
 function Workspace() {
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
@@ -71,6 +78,24 @@ function Workspace() {
   const project = projectQuery.data;
   const files = useMemo(() => filesQuery.data ?? [], [filesQuery.data]);
 
+  const roleQuery = useQuery({
+    queryKey: ["role", projectId],
+    queryFn: () => getMyRole(project!),
+    enabled: Boolean(project),
+  });
+  const role = roleQuery.data ?? "viewer";
+  const canEdit = role === "owner" || role === "editor";
+  const isOwner = role === "owner";
+
+  const packagesQuery = useQuery({
+    queryKey: ["packages", projectId],
+    queryFn: () => listPackages(projectId),
+  });
+  const membersQuery = useQuery({
+    queryKey: ["members", projectId],
+    queryFn: () => listMembers(projectId),
+  });
+
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const draftsRef = useRef<Record<string, string>>({});
   const dirtyRef = useRef<Set<string>>(new Set());
@@ -83,6 +108,7 @@ function Workspace() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [stdin, setStdin] = useState("");
   const [panel, setPanel] = useState<"console" | "preview">("console");
+  const [side, setSide] = useState<SidePanel>("files");
   const [previewKey, setPreviewKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nameDraft, setNameDraft] = useState("");
@@ -104,6 +130,33 @@ function Workspace() {
     setActiveId(entry.id);
     setOpenIds([entry.id]);
   }, [files, activeId, project?.entry_file]);
+
+  /* Live refresh when a collaborator saves. */
+  useEffect(() => {
+    const channel = supabase
+      .channel(`project-files-${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_files", filter: `project_id=eq.${projectId}` },
+        (payload) => {
+          const changed = (payload.new ?? payload.old) as { id?: string } | null;
+          if (changed?.id && dirtyRef.current.has(changed.id)) return;
+          queryClient.invalidateQueries({ queryKey: ["files", projectId] });
+          if (changed?.id && draftsRef.current[changed.id] !== undefined) {
+            const next = { ...draftsRef.current };
+            delete next[changed.id];
+            draftsRef.current = next;
+            setDrafts(next);
+          }
+          toast.message("This project was updated by someone else.");
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [projectId, queryClient]);
 
   const contentOf = useCallback(
     (file: FileRow) => draftsRef.current[file.id] ?? drafts[file.id] ?? file.content,
@@ -136,13 +189,14 @@ function Workspace() {
 
   const handleChange = useCallback(
     (fileId: string, next: string) => {
+      if (!canEdit) return;
       draftsRef.current = { ...draftsRef.current, [fileId]: next };
       setDrafts((current) => ({ ...current, [fileId]: next }));
       dirtyRef.current.add(fileId);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => void flushSaves(), 900);
     },
-    [flushSaves],
+    [flushSaves, canEdit],
   );
 
   useEffect(() => () => void flushSaves(), [flushSaves]);
@@ -157,8 +211,7 @@ function Workspace() {
       return;
     }
 
-    const entry = files.find((f) => f.path === project.entry_file) ?? files[0];
-    if (!entry) {
+    if (!files.length) {
       toast.error("Add a file to run.");
       return;
     }
@@ -167,7 +220,14 @@ function Workspace() {
     setPanel("console");
     try {
       const output = await run({
-        data: { runner: spec.runner, source: contentOf(entry), stdin },
+        data: {
+          runner: spec.runner,
+          language: project.language,
+          entry: project.entry_file,
+          files: files.map((file) => ({ path: file.path, content: contentOf(file) })),
+          packages: (packagesQuery.data ?? []).map((pkg) => ({ name: pkg.name, version: pkg.version })),
+          stdin,
+        },
       });
       setResult(output);
       await recordRun({
@@ -191,7 +251,18 @@ function Workspace() {
     } finally {
       setRunning(false);
     }
-  }, [project, spec, files, stdin, run, contentOf, flushSaves, queryClient, projectId]);
+  }, [
+    project,
+    spec,
+    files,
+    stdin,
+    run,
+    contentOf,
+    flushSaves,
+    queryClient,
+    projectId,
+    packagesQuery.data,
+  ]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -241,21 +312,21 @@ function Workspace() {
     setOpenIds((ids) => (ids.includes(file.id) ? ids : [...ids, file.id]));
   }
 
-  async function addFile() {
-    const path = prompt("New file name (e.g. helpers.py)")?.trim();
-    if (!path) return;
+  async function withRefresh(action: () => Promise<unknown>) {
     try {
-      const file = await createFile(projectId, path, files.length);
+      await action();
       await queryClient.invalidateQueries({ queryKey: ["files", projectId] });
-      openFile(file);
+      await queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the file.");
+      toast.error(error instanceof Error ? error.message : "That change could not be saved.");
     }
   }
 
+  const memberCount = membersQuery.data?.length ?? 0;
+
   return (
     <div className="flex h-screen flex-col bg-background">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-chrome px-3">
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-chrome px-3 sm:gap-3">
         <Button asChild size="icon" variant="ghost" aria-label="Back to projects">
           <Link to="/app">
             <ArrowLeft className="size-4" />
@@ -265,14 +336,15 @@ function Workspace() {
         <Input
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
+          readOnly={!canEdit}
           onBlur={async () => {
             const next = nameDraft.trim();
-            if (!next || next === project.name) return;
+            if (!canEdit || !next || next === project.name) return;
             await renameProject(projectId, next);
             queryClient.invalidateQueries({ queryKey: ["project", projectId] });
             queryClient.invalidateQueries({ queryKey: ["projects"] });
           }}
-          className="h-8 w-48 border-transparent bg-transparent font-mono text-sm focus-visible:border-input"
+          className="h-8 w-36 border-transparent bg-transparent font-mono text-sm focus-visible:border-input sm:w-48"
           aria-label="Project name"
         />
 
@@ -281,26 +353,43 @@ function Workspace() {
         </span>
 
         <span className="font-mono text-xs text-muted-foreground">
-          {saving ? "saving…" : "saved"}
+          {!canEdit ? "read-only" : saving ? "saving…" : "saved"}
         </span>
 
         <div className="ml-auto flex items-center gap-3">
-          <label className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-            <Globe className="size-3.5" />
-            Public
-            <Switch
-              checked={project.is_public}
-              onCheckedChange={async (checked) => {
-                await setProjectVisibility(projectId, checked);
-                queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-                if (checked) {
-                  const url = `${window.location.origin}/p/${project.share_slug}`;
-                  await navigator.clipboard.writeText(url).catch(() => undefined);
-                  toast.success("Share link copied to your clipboard.");
-                }
+          {memberCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSidebarOpen(true);
+                setSide("members");
               }}
-            />
-          </label>
+              className="hidden items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground md:flex"
+            >
+              <Users className="size-3.5" />
+              {memberCount}
+            </button>
+          ) : null}
+
+          {isOwner ? (
+            <label className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
+              <Globe className="size-3.5" />
+              Public
+              <Switch
+                checked={project.is_public}
+                onCheckedChange={async (checked) => {
+                  await setProjectVisibility(projectId, checked);
+                  queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+                  if (checked) {
+                    const url = `${window.location.origin}/p/${project.share_slug}`;
+                    await navigator.clipboard.writeText(url).catch(() => undefined);
+                    toast.success("Share link copied to your clipboard.");
+                  }
+                }}
+              />
+            </label>
+          ) : null}
+
           <Button onClick={() => void doRun()} disabled={running} size="sm">
             {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             Run
@@ -310,91 +399,71 @@ function Workspace() {
 
       <div className="flex min-h-0 flex-1">
         {sidebarOpen ? (
-          <aside className="flex w-52 shrink-0 flex-col border-r border-border bg-sidebar">
-            <div className="flex items-center gap-1 border-b border-border px-3 py-2">
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Files
-              </span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="ml-auto size-7"
-                onClick={() => void addFile()}
-                aria-label="New file"
-              >
-                <FilePlus2 className="size-3.5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-7"
+          <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
+            <div className="flex items-stretch border-b border-border">
+              {(["files", "packages", "members"] as SidePanel[]).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setSide(tab)}
+                  className={`flex-1 px-2 py-2 font-mono text-[11px] uppercase tracking-widest ${
+                    side === tab ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+              <button
+                type="button"
                 onClick={() => setSidebarOpen(false)}
-                aria-label="Hide files"
+                aria-label="Hide sidebar"
+                className="px-2 text-muted-foreground hover:text-foreground"
               >
                 <ChevronLeft className="size-3.5" />
-              </Button>
+              </button>
             </div>
-            <ul className="flex-1 overflow-auto p-1.5">
-              {files.map((file) => (
-                <li key={file.id}>
-                  <div
-                    className={`group flex items-center gap-1 rounded-md px-2 py-1.5 font-mono text-xs ${
-                      file.id === activeId
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/60"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className="flex-1 truncate text-left"
-                      onClick={() => openFile(file)}
-                    >
-                      {file.path}
-                      {file.path === project.entry_file ? (
-                        <span className="ml-1 text-primary">▸</span>
-                      ) : null}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Rename ${file.path}`}
-                      className="opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={async () => {
-                        const next = prompt("Rename file", file.path)?.trim();
-                        if (!next || next === file.path) return;
-                        await renameFile(file.id, next);
-                        if (file.path === project.entry_file) await setEntryFile(projectId, next);
-                        queryClient.invalidateQueries({ queryKey: ["files", projectId] });
-                        queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-                      }}
-                    >
-                      <Pencil className="size-3" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Delete ${file.path}`}
-                      className="opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={async () => {
-                        if (files.length === 1) {
-                          toast.error("A project needs at least one file.");
-                          return;
-                        }
-                        if (!confirm(`Delete ${file.path}?`)) return;
-                        await deleteFile(file.id);
-                        setOpenIds((ids) => ids.filter((id) => id !== file.id));
-                        if (activeId === file.id) setActiveId(null);
-                        queryClient.invalidateQueries({ queryKey: ["files", projectId] });
-                      }}
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="border-t border-border p-3">
-              <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-                ▸ marks the file that Run executes.
-              </p>
+
+            <div className="min-h-0 flex-1">
+              {side === "files" ? (
+                <FileTree
+                  files={files}
+                  activeId={activeId}
+                  entryPath={project.entry_file}
+                  canEdit={canEdit}
+                  onOpen={openFile}
+                  onCreate={(path) =>
+                    void withRefresh(async () => {
+                      const file = await createFile(projectId, path, files.length);
+                      openFile(file);
+                    })
+                  }
+                  onRename={(file, path) =>
+                    void withRefresh(async () => {
+                      await renameFile(file.id, path);
+                      if (file.path === project.entry_file) await setEntryFile(projectId, path);
+                    })
+                  }
+                  onDuplicate={(file) =>
+                    void withRefresh(() =>
+                      duplicateFile(file, `${file.path.replace(/(\.[^./]+)?$/, "")}-copy${file.path.match(/\.[^./]+$/)?.[0] ?? ""}`, files.length),
+                    )
+                  }
+                  onDelete={(file) =>
+                    void withRefresh(async () => {
+                      if (files.length === 1) throw new Error("A project needs at least one file.");
+                      if (!confirm(`Delete ${file.path}?`)) return;
+                      await deleteFile(file.id);
+                      setOpenIds((ids) => ids.filter((id) => id !== file.id));
+                      if (activeId === file.id) setActiveId(null);
+                    })
+                  }
+                  onSetEntry={(file) => void withRefresh(() => setEntryFile(projectId, file.path))}
+                />
+              ) : side === "packages" ? (
+                <PackagesPanel projectId={projectId} language={project.language} canEdit={canEdit} />
+              ) : (
+                <MembersPanel projectId={projectId} isOwner={isOwner} />
+              )}
             </div>
           </aside>
         ) : (
@@ -402,7 +471,7 @@ function Workspace() {
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="w-8 shrink-0 border-r border-border bg-sidebar font-mono text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Show files"
+            aria-label="Show sidebar"
           >
             ›
           </button>
@@ -436,6 +505,7 @@ function Workspace() {
                     key={activeFile.id}
                     value={contentOf(activeFile)}
                     language={editorLanguageFor(activeFile.path)}
+                    readOnly={!canEdit}
                     onChange={(next) => handleChange(activeFile.id, next)}
                   />
                 </Suspense>
@@ -475,6 +545,10 @@ function Workspace() {
               <WebPreview
                 refreshKey={previewKey}
                 files={files.map((file) => ({ path: file.path, content: contentOf(file) }))}
+                packages={(packagesQuery.data ?? []).map((pkg) => ({
+                  name: pkg.name,
+                  url: cdnUrlFor(pkg),
+                }))}
               />
             ) : (
               <OutputConsole result={result} running={running} />
