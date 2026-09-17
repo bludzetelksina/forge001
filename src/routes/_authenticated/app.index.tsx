@@ -19,7 +19,7 @@ import {
   createProjectFromTemplate,
   deleteProject,
   duplicateProject,
-  listProjects,
+  listProjectsWithRole,
 } from "@/lib/projects";
 
 export const Route = createFileRoute("/_authenticated/app/")({
