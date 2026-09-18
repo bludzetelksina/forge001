@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_user_connections: {
+        Row: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_key_ciphertext?: string
+          connector_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -37,6 +64,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_domains: {
+        Row: {
+          created_at: string
+          hostname: string
+          id: string
+          last_checked_at: string | null
+          project_id: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verify_token: string
+        }
+        Insert: {
+          created_at?: string
+          hostname: string
+          id?: string
+          last_checked_at?: string | null
+          project_id: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verify_token?: string
+        }
+        Update: {
+          created_at?: string
+          hostname?: string
+          id?: string
+          last_checked_at?: string | null
+          project_id?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verify_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_domains_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_files: {
         Row: {
@@ -71,6 +142,44 @@ export type Database = {
             foreignKeyName: "project_files_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_git_links: {
+        Row: {
+          branch: string
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          project_id: string
+          repo_full_name: string
+          updated_at: string
+        }
+        Insert: {
+          branch?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          project_id: string
+          repo_full_name: string
+          updated_at?: string
+        }
+        Update: {
+          branch?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          project_id?: string
+          repo_full_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_git_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -147,6 +256,47 @@ export type Database = {
             foreignKeyName: "project_packages_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_registries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          registry_url: string
+          scope: string | null
+          token_ciphertext: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          registry_url: string
+          scope?: string | null
+          token_ciphertext?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          registry_url?: string
+          scope?: string | null
+          token_ciphertext?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_registries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
