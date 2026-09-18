@@ -63,7 +63,6 @@ type SidePanel = "files" | "packages" | "members";
 function Workspace() {
   const { projectId } = Route.useParams();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const run = useServerFn(runCode);
 
   const projectQuery = useQuery({
