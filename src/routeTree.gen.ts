@@ -16,6 +16,8 @@ import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppProjectIdRouteImport } from './routes/_authenticated/app.$projectId'
+import { Route as OauthGithubReturnRouteImport } from './routes/oauth.github.return'
+import { Route as ApiPublicRegistrySplatRouteImport } from './routes/api/public/registry.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +54,16 @@ const AuthenticatedAppProjectIdRoute =
     path: '/app/$projectId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const OauthGithubReturnRoute = OauthGithubReturnRouteImport.update({
+  id: '/oauth/github/return',
+  path: '/oauth/github/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRegistrySplatRoute = ApiPublicRegistrySplatRouteImport.update({
+  id: '/api/public/registry/$',
+  path: '/api/public/registry/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,7 +71,9 @@ export interface FileRoutesByFullPath {
   '/templates': typeof TemplatesRoute
   '/p/$slug': typeof PSlugRoute
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
+  '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,7 +81,9 @@ export interface FileRoutesByTo {
   '/templates': typeof TemplatesRoute
   '/p/$slug': typeof PSlugRoute
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
+  '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,14 +93,31 @@ export interface FileRoutesById {
   '/templates': typeof TemplatesRoute
   '/p/$slug': typeof PSlugRoute
   '/_authenticated/app/$projectId': typeof AuthenticatedAppProjectIdRoute
+  '/oauth/github/return': typeof OauthGithubReturnRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/templates' | '/p/$slug' | '/app/$projectId' | '/app/'
+    | '/'
+    | '/auth'
+    | '/templates'
+    | '/p/$slug'
+    | '/app/$projectId'
+    | '/oauth/github/return'
+    | '/app/'
+    | '/api/public/registry/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/templates' | '/p/$slug' | '/app/$projectId' | '/app'
+  to:
+    | '/'
+    | '/auth'
+    | '/templates'
+    | '/p/$slug'
+    | '/app/$projectId'
+    | '/oauth/github/return'
+    | '/app'
+    | '/api/public/registry/$'
   id:
     | '__root__'
     | '/'
@@ -93,7 +126,9 @@ export interface FileRouteTypes {
     | '/templates'
     | '/p/$slug'
     | '/_authenticated/app/$projectId'
+    | '/oauth/github/return'
     | '/_authenticated/app/'
+    | '/api/public/registry/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -102,6 +137,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   TemplatesRoute: typeof TemplatesRoute
   PSlugRoute: typeof PSlugRoute
+  OauthGithubReturnRoute: typeof OauthGithubReturnRoute
+  ApiPublicRegistrySplatRoute: typeof ApiPublicRegistrySplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -155,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppProjectIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/oauth/github/return': {
+      id: '/oauth/github/return'
+      path: '/oauth/github/return'
+      fullPath: '/oauth/github/return'
+      preLoaderRoute: typeof OauthGithubReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/registry/$': {
+      id: '/api/public/registry/$'
+      path: '/api/public/registry/$'
+      fullPath: '/api/public/registry/$'
+      preLoaderRoute: typeof ApiPublicRegistrySplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -177,6 +228,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   TemplatesRoute: TemplatesRoute,
   PSlugRoute: PSlugRoute,
+  OauthGithubReturnRoute: OauthGithubReturnRoute,
+  ApiPublicRegistrySplatRoute: ApiPublicRegistrySplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
