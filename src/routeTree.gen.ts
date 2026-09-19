@@ -17,6 +17,7 @@ import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppProjectIdRouteImport } from './routes/_authenticated/app.$projectId'
 import { Route as OauthGithubReturnRouteImport } from './routes/oauth.github.return'
+import { Route as ApiPublicRegistrySplatRouteImport } from './routes/api/public/registry.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const OauthGithubReturnRoute = OauthGithubReturnRouteImport.update({
   path: '/oauth/github/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRegistrySplatRoute = ApiPublicRegistrySplatRouteImport.update({
+  id: '/api/public/registry/$',
+  path: '/api/public/registry/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/_authenticated/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/app/$projectId'
     | '/oauth/github/return'
     | '/app/'
+    | '/api/public/registry/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/app/$projectId'
     | '/oauth/github/return'
     | '/app'
+    | '/api/public/registry/$'
   id:
     | '__root__'
     | '/'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/$projectId'
     | '/oauth/github/return'
     | '/_authenticated/app/'
+    | '/api/public/registry/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -126,6 +138,7 @@ export interface RootRouteChildren {
   TemplatesRoute: typeof TemplatesRoute
   PSlugRoute: typeof PSlugRoute
   OauthGithubReturnRoute: typeof OauthGithubReturnRoute
+  ApiPublicRegistrySplatRoute: typeof ApiPublicRegistrySplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -186,6 +199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthGithubReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/registry/$': {
+      id: '/api/public/registry/$'
+      path: '/api/public/registry/$'
+      fullPath: '/api/public/registry/$'
+      preLoaderRoute: typeof ApiPublicRegistrySplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -209,6 +229,7 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesRoute: TemplatesRoute,
   PSlugRoute: PSlugRoute,
   OauthGithubReturnRoute: OauthGithubReturnRoute,
+  ApiPublicRegistrySplatRoute: ApiPublicRegistrySplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
