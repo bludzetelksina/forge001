@@ -15,17 +15,23 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 
+import DomainsPanel from "@/components/DomainsPanel";
 import FileTree from "@/components/FileTree";
+import GitPanel from "@/components/GitPanel";
 import MembersPanel from "@/components/MembersPanel";
 import OutputConsole from "@/components/OutputConsole";
 import PackagesPanel from "@/components/PackagesPanel";
+import PresenceBar from "@/components/PresenceBar";
 import WebPreview from "@/components/WebPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { cdnUrlFor, listMembers, listPackages } from "@/lib/collab";
+import { useAuth } from "@/hooks/useAuth";
+import { listMembers, listPackages, packageUrlFor } from "@/lib/collab";
+import { useProjectPresence } from "@/lib/presence";
+import { getRegistry } from "@/lib/registry.functions";
 import { editorLanguageFor, languageById } from "@/lib/languages";
 import {
   createFile,
@@ -58,7 +64,8 @@ export const Route = createFileRoute("/_authenticated/app/$projectId")({
   component: Workspace,
 });
 
-type SidePanel = "files" | "packages" | "members";
+type SidePanel = "files" | "packages" | "members" | "git" | "domains";
+
 
 function Workspace() {
   const { projectId } = Route.useParams();
