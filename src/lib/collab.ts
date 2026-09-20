@@ -93,3 +93,20 @@ export async function removePackage(packageId: string) {
 export function cdnUrlFor(pkg: PackageRow) {
   return `https://esm.sh/${pkg.name}${pkg.version ? `@${pkg.version}` : ""}`;
 }
+
+/**
+ * Where a package is loaded from: the project's own private registry when the
+ * name sits inside its scope, otherwise the public CDN.
+ */
+export function packageUrlFor(
+  pkg: PackageRow,
+  registry: { scope: string | null } | null,
+  projectId: string,
+) {
+  if (registry && (!registry.scope || pkg.name.startsWith(registry.scope))) {
+    const version = pkg.version ? `@${pkg.version}` : "";
+    return `/api/public/registry/${projectId}/${pkg.name}${version}`;
+  }
+  return cdnUrlFor(pkg);
+}
+
