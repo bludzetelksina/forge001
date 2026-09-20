@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Plus, Trash2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Lock, Package, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addPackage, listPackages, removePackage } from "@/lib/collab";
+import { getRegistry, removeRegistry, saveRegistry } from "@/lib/registry.functions";
 
 const CDN_LANGUAGES = new Set(["web"]);
+
 
 const SANDBOX_NOTE: Record<string, string> = {
   python: "Forge tries pip install at run time; the sandbox usually blocks it, and the console will say so.",
