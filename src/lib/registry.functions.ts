@@ -54,13 +54,14 @@ export const saveRegistry = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { encryptSecret } = await import("./connectionKeyCrypto.server");
 
-    const patch: Record<string, unknown> = {
+    const token = data.token.trim();
+    const patch = {
       project_id: data.projectId,
       registry_url: url,
       scope: data.scope.trim() || null,
       created_by: context.userId,
+      ...(token ? { token_ciphertext: encryptSecret(token) } : {}),
     };
-    if (data.token.trim()) patch['token_ciphertext'] = encryptSecret(data.token.trim());
 
     const { error } = await supabaseAdmin
       .from("project_registries")
