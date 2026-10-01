@@ -449,8 +449,8 @@ function Workspace() {
       <div className="flex min-h-0 flex-1">
         {sidebarOpen ? (
           <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
-            <div className="flex items-stretch border-b border-border">
-              {(["files", "packages", "members"] as SidePanel[]).map((tab) => (
+            <div className="flex items-stretch overflow-x-auto border-b border-border">
+              {(["files", "packages", "members", "git", "domains"] as SidePanel[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -509,9 +509,23 @@ function Workspace() {
                   onSetEntry={(file) => void withRefresh(() => setEntryFile(projectId, file.path))}
                 />
               ) : side === "packages" ? (
-                <PackagesPanel projectId={projectId} language={project.language} canEdit={canEdit} />
-              ) : (
+                <PackagesPanel
+                  projectId={projectId}
+                  language={project.language}
+                  canEdit={canEdit}
+                  isOwner={isOwner}
+                />
+              ) : side === "members" ? (
                 <MembersPanel projectId={projectId} isOwner={isOwner} />
+              ) : side === "git" ? (
+                <GitPanel projectId={projectId} projectName={project.name} canEdit={canEdit} />
+              ) : (
+                <DomainsPanel
+                  projectId={projectId}
+                  isOwner={isOwner}
+                  isWeb={Boolean(isWeb)}
+                  isPublic={project.is_public}
+                />
               )}
             </div>
           </aside>
