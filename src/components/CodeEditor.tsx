@@ -52,7 +52,7 @@ class CaretWidget extends WidgetType {
   ) {
     super();
   }
-  eq(other: CaretWidget) {
+  override eq(other: CaretWidget) {
     return other.name === this.name && other.colour === this.colour;
   }
   toDOM() {

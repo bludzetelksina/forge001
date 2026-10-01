@@ -2,8 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+type RoleClient = {
+  rpc: (name: "project_role", args: { _project_id: string; _user_id: string }) => PromiseLike<{
+    data: unknown;
+  }>;
+};
+
 async function assertRole(
-  supabase: { rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown }> },
+  supabase: RoleClient,
   projectId: string,
   userId: string,
   allowed: string[],
@@ -13,6 +19,7 @@ async function assertRole(
   if (!allowed.includes(role)) throw new Error("You do not have permission to do that.");
   return role;
 }
+
 
 /** Registry details safe to show in the browser — never the token itself. */
 export const getRegistry = createServerFn({ method: "POST" })
@@ -47,13 +54,14 @@ export const saveRegistry = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { encryptSecret } = await import("./connectionKeyCrypto.server");
 
-    const patch: Record<string, unknown> = {
+    const token = data.token.trim();
+    const patch = {
       project_id: data.projectId,
       registry_url: url,
       scope: data.scope.trim() || null,
       created_by: context.userId,
+      ...(token ? { token_ciphertext: encryptSecret(token) } : {}),
     };
-    if (data.token.trim()) patch['token_ciphertext'] = encryptSecret(data.token.trim());
 
     const { error } = await supabaseAdmin
       .from("project_registries")
