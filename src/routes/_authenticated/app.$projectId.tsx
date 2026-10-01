@@ -541,6 +541,7 @@ function Workspace() {
         )}
 
         <section className="flex min-w-0 flex-1 flex-col">
+          <PresenceBar peers={peers} />
           <div className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-border bg-chrome">
             {openFiles.map((file) => (
               <button
@@ -570,6 +571,8 @@ function Workspace() {
                     language={editorLanguageFor(activeFile.path)}
                     readOnly={!canEdit}
                     onChange={(next) => handleChange(activeFile.id, next)}
+                    remoteCursors={remoteCursors}
+                    onCursor={(anchor, head) => setCursor({ anchor, head })}
                   />
                 </Suspense>
               </ClientOnly>
@@ -610,7 +613,7 @@ function Workspace() {
                 files={files.map((file) => ({ path: file.path, content: contentOf(file) }))}
                 packages={(packagesQuery.data ?? []).map((pkg) => ({
                   name: pkg.name,
-                  url: cdnUrlFor(pkg),
+                  url: packageUrlFor(pkg, registry, projectId),
                 }))}
               />
             ) : (
