@@ -102,6 +102,16 @@ function Workspace() {
     queryFn: () => listMembers(projectId),
   });
 
+  const readRegistry = useServerFn(getRegistry);
+  const registryQuery = useQuery({
+    queryKey: ["registry", projectId],
+    queryFn: () => readRegistry({ data: { projectId } }),
+  });
+  const registry = registryQuery.data?.configured
+    ? { scope: registryQuery.data.scope ?? null }
+    : null;
+
+
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const draftsRef = useRef<Record<string, string>>({});
   const dirtyRef = useRef<Set<string>>(new Set());
