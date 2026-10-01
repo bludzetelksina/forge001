@@ -572,7 +572,7 @@ function Workspace() {
                     readOnly={!canEdit}
                     onChange={(next) => handleChange(activeFile.id, next)}
                     remoteCursors={remoteCursors}
-                    onCursor={(anchor, head) => setCursor({ anchor, head })}
+                    onCursor={(range) => setCursor(range)}
                   />
                 </Suspense>
               </ClientOnly>
