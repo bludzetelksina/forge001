@@ -128,9 +128,42 @@ function Workspace() {
   const [previewKey, setPreviewKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nameDraft, setNameDraft] = useState("");
+  const [cursor, setCursor] = useState({ anchor: 0, head: 0 });
 
   const spec = project ? languageById(project.language) : null;
   const isWeb = spec?.runner === null;
+
+  /* Who else is in this project, and where their cursor sits. */
+  const { user } = useAuth();
+  const activePath = useMemo(
+    () => files.find((file) => file.id === activeId)?.path ?? null,
+    [files, activeId],
+  );
+  const { peers } = useProjectPresence(
+    projectId,
+    {
+      userId: user?.id ?? null,
+      name:
+        (user?.user_metadata?.['display_name'] as string | undefined) ??
+        user?.email?.split("@")[0] ??
+        "Someone",
+    },
+    { filePath: activePath, anchor: cursor.anchor, head: cursor.head },
+  );
+  const remoteCursors = useMemo(
+    () =>
+      peers
+        .filter((peer) => peer.filePath && peer.filePath === activePath)
+        .map((peer) => ({
+          userId: peer.userId,
+          name: peer.name,
+          colour: peer.colour,
+          anchor: peer.anchor ?? 0,
+          head: peer.head ?? 0,
+        })),
+    [peers, activePath],
+  );
+
 
   useEffect(() => {
     if (project) setNameDraft(project.name);
