@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { languageById, type LanguageId } from "./languages";
+import type { Starter } from "./starters";
 
 export type ProjectRow = {
   id: string;
@@ -106,6 +107,32 @@ export async function listFiles(projectId: string): Promise<FileRow[]> {
     .order("path", { ascending: true });
   if (error) throw error;
   return (data ?? []) as FileRow[];
+}
+
+export async function createProjectFromStarter(starter: Starter): Promise<ProjectRow> {
+  const ownerId = await requireUserId();
+  const { data: project, error } = await supabase
+    .from("projects")
+    .insert({
+      owner_id: ownerId,
+      name: starter.label,
+      language: starter.language,
+      template: starter.id,
+      entry_file: starter.entry,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const { error: filesError } = await supabase.from("project_files").insert(
+    starter.files.map((file, index) => ({
+      project_id: project.id,
+      path: file.path,
+      content: file.content,
+      sort_order: index,
+    })),
+  );
+  if (filesError) throw filesError;
+  return project as ProjectRow;
 }
 
 export async function createProjectFromTemplate(

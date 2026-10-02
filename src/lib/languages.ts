@@ -237,8 +237,8 @@ echo implode(", ", array_map(fn ($n) => $n * $n, [1, 2, 3])), PHP_EOL;
   },
   {
     id: "bash",
-    label: "Bash",
-    blurb: "Shell script, one shot",
+    label: "Linux shell (GNU bash)",
+    blurb: "GNU bash + coreutils, one-shot scripts",
     runner: "bash",
     entry: "main.sh",
     files: [
