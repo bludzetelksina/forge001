@@ -108,6 +108,32 @@ export async function listFiles(projectId: string): Promise<FileRow[]> {
   return (data ?? []) as FileRow[];
 }
 
+export async function createProjectFromStarter(starter: Starter): Promise<ProjectRow> {
+  const ownerId = await requireUserId();
+  const { data: project, error } = await supabase
+    .from("projects")
+    .insert({
+      owner_id: ownerId,
+      name: starter.label,
+      language: starter.language,
+      template: starter.id,
+      entry_file: starter.entry,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const { error: filesError } = await supabase.from("project_files").insert(
+    starter.files.map((file, index) => ({
+      project_id: project.id,
+      path: file.path,
+      content: file.content,
+      sort_order: index,
+    })),
+  );
+  if (filesError) throw filesError;
+  return project as ProjectRow;
+}
+
 export async function createProjectFromTemplate(
   languageId: LanguageId,
   name?: string,
