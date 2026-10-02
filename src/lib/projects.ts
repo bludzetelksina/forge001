@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { languageById, type LanguageId } from "./languages";
+import type { Starter } from "./starters";
 
 export type ProjectRow = {
   id: string;
