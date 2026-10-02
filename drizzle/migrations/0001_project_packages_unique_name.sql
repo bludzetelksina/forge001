@@ -1,0 +1,1 @@
+ALTER TABLE public.project_packages ADD CONSTRAINT project_packages_project_id_name_key UNIQUE (project_id, name);
