@@ -518,7 +518,7 @@ function Workspace() {
               ) : side === "members" ? (
                 <MembersPanel projectId={projectId} isOwner={isOwner} />
               ) : side === "git" ? (
-                <GitPanel projectId={projectId} projectName={project.name} canEdit={canEdit} />
+                <GitPanel projectId={projectId} projectName={project.name} canEdit={canEdit} language={project.language} />
               ) : (
                 <DomainsPanel
                   projectId={projectId}

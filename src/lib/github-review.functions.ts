@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GATEWAY_BASE_URL = "https://connector-gateway.lovable.dev";
 const CONNECTOR_ID = "github";
-const SCOPES = ["read:user", "repo"];
+const SCOPES = ["read:user", "repo", "workflow"];
 
 async function gh(userId: string, path: string, init?: RequestInit) {
   const { getConnectionKeyForUser } = await import("./appUserConnections.server");

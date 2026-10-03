@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GATEWAY_BASE_URL = "https://connector-gateway.lovable.dev";
 const CONNECTOR_ID = "github";
-export const GITHUB_SCOPES = ["read:user", "repo"];
+export const GITHUB_SCOPES = ["read:user", "repo", "workflow"];
 
 const TEXT_EXTENSIONS = new Set([
   "txt", "md", "markdown", "json", "js", "jsx", "ts", "tsx", "html", "htm", "css", "scss",
