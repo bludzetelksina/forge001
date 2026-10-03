@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import GitReviewSection from "@/components/GitReviewSection";
 import {
   completeGithubConnection,
   createRepo,
@@ -58,10 +59,12 @@ export default function GitPanel({
   projectId,
   projectName,
   canEdit,
+  language = "",
 }: {
   projectId: string;
   projectName: string;
   canEdit: boolean;
+  language?: string;
 }) {
   const queryClient = useQueryClient();
   const status = useServerFn(githubStatus);
@@ -349,6 +352,10 @@ export default function GitPanel({
         <p className="mt-3 font-mono text-[10px] text-muted-foreground">
           Last synced {new Date(linkQuery.data.last_synced_at).toLocaleString()}
         </p>
+      ) : null}
+
+      {repo ? (
+        <GitReviewSection projectId={projectId} repo={repo} branch={branch} canEdit={canEdit} language={language} />
       ) : null}
     </div>
   );
