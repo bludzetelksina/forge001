@@ -44,6 +44,8 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
   const emuRef = useRef<Emulator | null>(null);
   const [status, setStatus] = useState<"idle" | "booting" | "ready">("idle");
   const [line, setLine] = useState("");
+  const [output, setOutput] = useState("");
+  const outRef = useRef<HTMLPreElement>(null);
 
   async function boot() {
     if (emuRef.current || !screenRef.current) return;
@@ -57,7 +59,7 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
       bios: { url: "/v86/seabios.bin" },
       vga_bios: { url: "/v86/vgabios.bin" },
       bzimage: { url: IMAGE_URL, async: false },
-      cmdline: "tsc=reliable mitigations=off random.trust_cpu=on",
+      cmdline: "console=ttyS0 tsc=reliable mitigations=off random.trust_cpu=on",
       autostart: true,
       disable_speaker: true,
     }) as unknown as Emulator;
@@ -66,7 +68,9 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
     let buffer = "";
     let setupDone = false;
     emulator.add_listener("serial0-output-byte", (byte) => {
-      buffer = (buffer + String.fromCharCode(byte as number)).slice(-200);
+      const ch = String.fromCharCode(byte as number);
+      buffer = (buffer + ch).slice(-200);
+      if (ch !== "\r") setOutput((o) => (o + ch).slice(-60_000));
       if (!setupDone && /[#$] $/.test(buffer)) {
         setupDone = true;
         for (const cmd of SETUP) emulator.serial0_send(`${cmd}\n`);
@@ -83,6 +87,10 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
       }
     }, 60_000);
   }
+
+  useEffect(() => {
+    outRef.current?.scrollTo({ top: outRef.current.scrollHeight });
+  }, [output]);
 
   useEffect(() => {
     void boot();
@@ -121,7 +129,10 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
           <Upload className="size-3" />
         </Button>
       </div>
-      <div ref={screenRef} className="forge-vm min-h-0 flex-1 overflow-auto" data-testid="vm-screen">
+      <pre ref={outRef} data-testid="vm-terminal" className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-2 font-mono text-[12px] leading-snug text-foreground">
+        {output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") || "Starting the machine… the first boot downloads about 10 MB."}
+      </pre>
+      <div ref={screenRef} className="sr-only" aria-hidden>
         <div style={{ whiteSpace: "pre", font: "14px monospace", lineHeight: "normal" }} />
         <canvas style={{ display: "none" }} />
       </div>
@@ -136,7 +147,7 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
         <input
           value={line}
           onChange={(e) => setLine(e.target.value)}
-          placeholder="Type a command and press Enter (or click the screen and type)"
+          placeholder="Type a command and press Enter"
           className="h-7 flex-1 rounded-md border border-input bg-transparent px-2 font-mono text-xs"
           aria-label="Shell command"
         />
