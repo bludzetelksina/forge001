@@ -17,6 +17,7 @@ const runSchema = z.object({
     .max(40)
     .optional(),
   stdin: z.string().max(20_000).optional(),
+  env: z.record(z.string().max(64), z.string().max(4000)).optional(),
 });
 
 export type RunResult = {
@@ -69,6 +70,7 @@ export const runCode = createServerFn({ method: "POST" })
       entry: data.entry,
       files: data.files,
       packages: data.packages ?? [],
+      env: data.env ?? {},
     });
     const notePrefix = notes.length ? `${notes.join("\n")}\n` : "";
 

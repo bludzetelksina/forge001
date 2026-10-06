@@ -8,3 +8,10 @@
 - [ ] Email on custom domains via Resend (needs the owner's Resend key)
 - [ ] Private registries prefetch for Python/Node sandbox runs
 - [ ] Browser click-through of Git/Domains/Packages tabs
+# 06.10.2026 plan
+- [ ] Linux VM (v86) Shell tool + template, user forge/server123
+- [ ] Workspace tools: Shell, Developer (env vars, run history), Cloud, Settings
+- [ ] Live letter-by-letter co-typing (Yjs)
+- [ ] Domain email via shared Resend
+- [ ] Private-registry packages for Python/JS runs
+- [ ] Full browser test

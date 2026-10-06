@@ -308,6 +308,7 @@ export function bundleProject(input: {
   entry: string;
   files: BundleFile[];
   packages?: BundlePackage[];
+  env?: Record<string, string>;
 }): BundleResult {
   const notes: string[] = [];
   const packages = input.packages ?? [];
@@ -375,5 +376,31 @@ export function bundleProject(input: {
       source = byPath(files, entry)?.content ?? "";
   }
 
-  return { source: source.slice(0, MAX_BUNDLE_BYTES), notes };
+  const prelude = envPrelude(input.language, input.env ?? {});
+  if (prelude === null && Object.keys(input.env ?? {}).length) {
+    notes.push("[forge] Environment variables are not passed to this language yet.");
+  }
+  return { source: ((prelude ?? "") + source).slice(0, MAX_BUNDLE_BYTES), notes };
+}
+
+/** Code placed before the program so it can read the project's environment variables. */
+function envPrelude(language: string, env: Record<string, string>): string | null {
+  const entries = Object.entries(env).filter(([k]) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(k));
+  if (!entries.length) return "";
+  const json = JSON.stringify(Object.fromEntries(entries));
+  switch (language) {
+    case "python":
+      return `import os as __forge_os, json as __forge_json\n__forge_os.environ.update(__forge_json.loads(${JSON.stringify(json)}))\n`;
+    case "javascript":
+    case "typescript":
+      return `Object.assign(process.env, ${json});\n`;
+    case "ruby":
+      return `require "json"\nJSON.parse(${JSON.stringify(json)}).each { |k, v| ENV[k] = v }\n`;
+    case "bash":
+      return entries.map(([k, v]) => `export ${k}='${v.replace(/'/g, "'\\''")}'`).join("\n") + "\n";
+    case "php":
+      return null;
+    default:
+      return null;
+  }
 }
