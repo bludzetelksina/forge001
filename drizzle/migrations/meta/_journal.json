@@ -15,6 +15,13 @@
       "when": 1790959108302,
       "tag": "0001_project_packages_unique_name",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791274798487,
+      "tag": "0002_tools_env_email_registry_kind",
+      "breakpoints": true
     }
   ]
 }

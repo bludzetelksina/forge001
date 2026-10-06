@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      domain_email: {
+        Row: {
+          created_at: string
+          domain_id: string
+          enabled: boolean
+          hour_start: string
+          id: string
+          project_id: string
+          sent_this_hour: number
+          to_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain_id: string
+          enabled?: boolean
+          hour_start?: string
+          id?: string
+          project_id: string
+          sent_this_hour?: number
+          to_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain_id?: string
+          enabled?: boolean
+          hour_start?: string
+          id?: string
+          project_id?: string
+          sent_this_hour?: number
+          to_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_email_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: true
+            referencedRelation: "project_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_email_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -102,6 +150,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_domains_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_env: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          project_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          project_id: string
+          value?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          project_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_env_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -266,6 +346,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          kind: string
           project_id: string
           registry_url: string
           scope: string | null
@@ -276,6 +357,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          kind?: string
           project_id: string
           registry_url: string
           scope?: string | null
@@ -286,6 +368,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          kind?: string
           project_id?: string
           registry_url?: string
           scope?: string | null
