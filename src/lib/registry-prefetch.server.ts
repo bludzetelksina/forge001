@@ -11,7 +11,7 @@ type Pkg = { name: string; version: string | null };
 type File = { path: string; content: string };
 
 async function inflate(data: Uint8Array, format: "gzip" | "deflate-raw") {
-  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream(format));
+  const stream = new Blob([data as Uint8Array<ArrayBuffer>]).stream().pipeThrough(new DecompressionStream(format));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
