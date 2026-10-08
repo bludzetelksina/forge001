@@ -81,6 +81,8 @@
     "v86": "^0.5.470",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
+    "y-codemirror.next": "^0.3.6",
+    "yjs": "^13.6.33",
     "zod": "^3.25.76"
   },
   "devDependencies": {
