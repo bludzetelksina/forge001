@@ -17,6 +17,7 @@ const runSchema = z.object({
     .max(40)
     .optional(),
   stdin: z.string().max(20_000).optional(),
+  projectId: z.string().uuid().optional(),
   env: z.record(z.string().max(64), z.string().max(4000)).optional(),
 });
 
@@ -65,13 +66,31 @@ export const runCode = createServerFn({ method: "POST" })
 
     const started = Date.now();
 
-    const { source, notes } = bundleProject({
+    let extraFiles: Array<{ path: string; content: string }> = [];
+    const registryNotes: string[] = [];
+    let remainingPackages = data.packages ?? [];
+    if (data.projectId && remainingPackages.length) {
+      const { prefetchPrivatePackages } = await import("./registry-prefetch.server");
+      const fetched = await prefetchPrivatePackages({
+        projectId: data.projectId,
+        language: data.language,
+        packages: remainingPackages,
+      });
+      extraFiles = fetched.files;
+      registryNotes.push(...fetched.notes);
+      const loaded = new Set(fetched.notes.filter((n) => n.includes("Loaded ")).map((n) => n.split("Loaded ")[1]!.split(/[@ ]/)[0]));
+      remainingPackages = remainingPackages.filter((p) => !loaded.has(p.name));
+    }
+
+    const bundled = bundleProject({
       language: data.language,
       entry: data.entry,
-      files: data.files,
-      packages: data.packages ?? [],
+      files: [...data.files, ...extraFiles],
+      packages: remainingPackages,
       env: data.env ?? {},
     });
+    const source = bundled.source;
+    const notes = [...registryNotes, ...bundled.notes];
     const notePrefix = notes.length ? `${notes.join("\n")}\n` : "";
 
     const createBody = new URLSearchParams({

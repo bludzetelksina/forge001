@@ -307,6 +307,7 @@ function Workspace() {
           files: files.map((file) => ({ path: file.path, content: contentOf(file) })),
           packages: (packagesQuery.data ?? []).map((pkg) => ({ name: pkg.name, version: pkg.version })),
           stdin,
+          projectId,
           env: Object.fromEntries((envQuery.data ?? []).map((row) => [row.key, row.value])),
         },
       });
