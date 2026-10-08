@@ -47,6 +47,7 @@ export default function PackagesPanel({
   const [registryUrl, setRegistryUrl] = useState("");
   const [scope, setScope] = useState("");
   const [token, setToken] = useState("");
+  const [kind, setKind] = useState<"npm" | "pypi">("npm");
   const [showRegistry, setShowRegistry] = useState(false);
 
   const packages = useQuery({
@@ -61,6 +62,7 @@ export default function PackagesPanel({
       if (result.configured) {
         setRegistryUrl((current) => current || result.registryUrl);
         setScope((current) => current || (result.scope ?? ""));
+        setKind(result.kind);
       }
       return result;
     },
@@ -83,7 +85,7 @@ export default function PackagesPanel({
   });
 
   const saveReg = useMutation({
-    mutationFn: () => writeRegistry({ data: { projectId, registryUrl, scope, token } }),
+    mutationFn: () => writeRegistry({ data: { projectId, registryUrl, scope, token, kind } }),
     onSuccess: () => {
       setToken("");
       setShowRegistry(false);
@@ -192,7 +194,7 @@ export default function PackagesPanel({
 
           {registry.data?.configured ? (
             <p className="mt-1 break-all font-mono text-[11px] text-foreground">
-              {registry.data.registryUrl}
+              {registry.data.kind} · {registry.data.registryUrl}
               {registry.data.scope ? ` · ${registry.data.scope}` : ""}
               {registry.data.hasToken ? " · token saved" : " · no token"}
             </p>
@@ -204,6 +206,15 @@ export default function PackagesPanel({
 
           {showRegistry && isOwner ? (
             <div className="mt-2 space-y-2">
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as "npm" | "pypi")}
+                className="h-8 w-full rounded-md border border-input bg-transparent px-2 font-mono text-xs"
+                aria-label="Registry type"
+              >
+                <option value="npm">npm (JavaScript)</option>
+                <option value="pypi">PyPI (Python)</option>
+              </select>
               <Input
                 value={registryUrl}
                 onChange={(e) => setRegistryUrl(e.target.value)}
@@ -249,8 +260,8 @@ export default function PackagesPanel({
               </div>
               <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
                 The token stays on Forge's server and is never shown again. Packages in this scope load
-                through Forge in the web preview; the run sandbox for other languages still can't install
-                anything.
+                through Forge in the web preview, and small pure-source packages are added to Python and
+                JavaScript runs. Compiled packages and other languages aren't supported.
               </p>
             </div>
           ) : null}

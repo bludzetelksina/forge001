@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,11 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { checkEmailDomain } from "@/lib/domain-email.functions";
+
+type Dns = { status: string; records: Array<{ type: string; name: string; value: string; status: string }> };
 
 /** Contact-form email for a project's verified domains, sent through Forge's Resend account. */
 export default function DomainEmailSection({ projectId }: { projectId: string }) {
   const qc = useQueryClient();
   const [to, setTo] = useState<Record<string, string>>({});
+  const [dns, setDns] = useState<Record<string, Dns>>({});
+  const check = useServerFn(checkEmailDomain);
+  const checkMutation = useMutation({
+    mutationFn: (domainId: string) => check({ data: { domainId } }).then((r) => ({ domainId, r })),
+    onSuccess: ({ domainId, r }) => setDns((d) => ({ ...d, [domainId]: r })),
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const rows = useQuery({
     queryKey: ["domain-email", projectId],
@@ -77,6 +88,20 @@ export default function DomainEmailSection({ projectId }: { projectId: string })
                       Save
                     </Button>
                   </div>
+                  <Button size="sm" variant="secondary" className="mt-2 h-7" disabled={checkMutation.isPending}
+                    onClick={() => checkMutation.mutate(d.id)}>
+                    Check sending records
+                  </Button>
+                  {dns[d.id] ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-foreground">Sending status: {dns[d.id]!.status}</p>
+                      {dns[d.id]!.records.map((r) => (
+                        <p key={r.type + r.name} className="break-all text-muted-foreground">
+                          {r.type} {r.name} → {r.value} <span className={r.status === "verified" ? "text-primary" : ""}>({r.status})</span>
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                   <p className="mt-2 break-all text-muted-foreground">
                     In your site: {`<form method="post" action="/api/public/forms/${d.hostname}">`} with fields name, email, message. Up to 30 messages an hour.
                   </p>
