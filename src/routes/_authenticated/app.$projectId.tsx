@@ -15,7 +15,9 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 
-import DomainsPanel from "@/components/DomainsPanel";
+import CloudPanel from "@/components/CloudPanel";
+import DeveloperPanel, { listEnv } from "@/components/DeveloperPanel";
+import SettingsPanel, { vmMemoryFor } from "@/components/SettingsPanel";
 import FileTree from "@/components/FileTree";
 import GitPanel from "@/components/GitPanel";
 import MembersPanel from "@/components/MembersPanel";
@@ -51,6 +53,10 @@ import {
 import { runCode, type RunResult } from "@/lib/run.functions";
 
 const CodeEditor = lazy(() => import("@/components/CodeEditor"));
+const ShellPanel = lazy(() => import("@/components/ShellPanel"));
+
+type Tool = "console" | "preview" | "shell" | "developer" | "cloud" | "settings";
+const TOOLS: Tool[] = ["console", "preview", "shell", "developer", "cloud", "settings"];
 
 export const Route = createFileRoute("/_authenticated/app/$projectId")({
   head: () => ({
@@ -61,10 +67,12 @@ export const Route = createFileRoute("/_authenticated/app/$projectId")({
       { property: "og:description", content: "Edit, run and share your Forge project." },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { tool?: Tool } =>
+    TOOLS.includes(search["tool"] as Tool) ? { tool: search["tool"] as Tool } : {},
   component: Workspace,
 });
 
-type SidePanel = "files" | "packages" | "members" | "git" | "domains";
+type SidePanel = "files" | "packages" | "members" | "git";
 
 
 function Workspace() {
@@ -123,7 +131,17 @@ function Workspace() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [stdin, setStdin] = useState("");
-  const [panel, setPanel] = useState<"console" | "preview">("console");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const panel: Tool = search.tool ?? "console";
+  const setPanel = useCallback(
+    (tool: Tool) => void navigate({ search: { tool }, replace: true }),
+    [navigate],
+  );
+  const [shellStarted, setShellStarted] = useState(false);
+  useEffect(() => {
+    if (panel === "shell") setShellStarted(true);
+  }, [panel]);
   const [side, setSide] = useState<SidePanel>("files");
   const [previewKey, setPreviewKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -170,8 +188,17 @@ function Workspace() {
   }, [project?.id, project?.name]);
 
   useEffect(() => {
-    if (isWeb) setPanel("preview");
-  }, [isWeb]);
+    if (search.tool || !project) return;
+    if (project.language === "vm") setPanel("shell");
+    else if (isWeb) setPanel("preview");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWeb, project?.language]);
+
+  const envQuery = useQuery({
+    queryKey: ["env", projectId],
+    queryFn: () => listEnv(projectId),
+    enabled: canEdit,
+  });
 
   useEffect(() => {
     if (!files.length || activeId) return;
@@ -276,6 +303,7 @@ function Workspace() {
           files: files.map((file) => ({ path: file.path, content: contentOf(file) })),
           packages: (packagesQuery.data ?? []).map((pkg) => ({ name: pkg.name, version: pkg.version })),
           stdin,
+          env: Object.fromEntries((envQuery.data ?? []).map((row) => [row.key, row.value])),
         },
       });
       setResult(output);
@@ -311,6 +339,8 @@ function Workspace() {
     queryClient,
     projectId,
     packagesQuery.data,
+    envQuery.data,
+    setPanel,
   ]);
 
   useEffect(() => {
@@ -450,7 +480,7 @@ function Workspace() {
         {sidebarOpen ? (
           <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
             <div className="flex items-stretch overflow-x-auto border-b border-border">
-              {(["files", "packages", "members", "git", "domains"] as SidePanel[]).map((tab) => (
+              {(["files", "packages", "members", "git"] as SidePanel[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -517,15 +547,8 @@ function Workspace() {
                 />
               ) : side === "members" ? (
                 <MembersPanel projectId={projectId} isOwner={isOwner} />
-              ) : side === "git" ? (
-                <GitPanel projectId={projectId} projectName={project.name} canEdit={canEdit} language={project.language} />
               ) : (
-                <DomainsPanel
-                  projectId={projectId}
-                  isOwner={isOwner}
-                  isWeb={Boolean(isWeb)}
-                  isPublic={project.is_public}
-                />
+                <GitPanel projectId={projectId} projectName={project.name} canEdit={canEdit} language={project.language} />
               )}
             </div>
           </aside>
@@ -583,30 +606,34 @@ function Workspace() {
         </section>
 
         <section className="flex w-[38%] min-w-72 shrink-0 flex-col border-l border-border">
-          <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-chrome">
-            <button
-              type="button"
-              onClick={() => setPanel("console")}
-              className={`flex items-center gap-1.5 border-r border-border px-3 font-mono text-xs ${
-                panel === "console" ? "bg-editor text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              <Terminal className="size-3" /> Console
-            </button>
-            {isWeb ? (
+          <div className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-border bg-chrome" role="tablist" aria-label="Tools">
+            {TOOLS.filter((tool) => tool !== "preview" || isWeb).map((tool) => (
               <button
+                key={tool}
                 type="button"
-                onClick={() => setPanel("preview")}
-                className={`flex items-center gap-1.5 border-r border-border px-3 font-mono text-xs ${
-                  panel === "preview" ? "bg-editor text-foreground" : "text-muted-foreground"
+                role="tab"
+                aria-selected={panel === tool}
+                onClick={() => setPanel(tool)}
+                className={`flex items-center gap-1.5 border-r border-border px-3 font-mono text-xs capitalize ${
+                  panel === tool ? "bg-editor text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Monitor className="size-3" /> Preview
+                {tool === "console" ? <Terminal className="size-3" /> : tool === "preview" ? <Monitor className="size-3" /> : null}
+                {tool}
               </button>
-            ) : null}
+            ))}
           </div>
 
-          <div className="min-h-0 flex-1">
+          <div className="relative min-h-0 flex-1">
+            {shellStarted ? (
+              <div className={panel === "shell" ? "absolute inset-0" : "hidden"}>
+                <ClientOnly fallback={null}>
+                  <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading shell…</div>}>
+                    <ShellPanel projectId={projectId} memoryMb={vmMemoryFor(projectId)} />
+                  </Suspense>
+                </ClientOnly>
+              </div>
+            ) : null}
             {panel === "preview" && isWeb ? (
               <WebPreview
                 refreshKey={previewKey}
@@ -616,12 +643,18 @@ function Workspace() {
                   url: packageUrlFor(pkg, registry, projectId),
                 }))}
               />
-            ) : (
+            ) : panel === "console" ? (
               <OutputConsole result={result} running={running} />
-            )}
+            ) : panel === "developer" ? (
+              <DeveloperPanel projectId={projectId} canEdit={canEdit} result={result} running={running} />
+            ) : panel === "cloud" ? (
+              <CloudPanel project={project} isOwner={isOwner} isWeb={Boolean(isWeb)} />
+            ) : panel === "settings" ? (
+              <SettingsPanel project={project} files={files} canEdit={canEdit} isOwner={isOwner} />
+            ) : null}
           </div>
 
-          {!isWeb ? (
+          {!isWeb && panel === "console" ? (
             <div className="shrink-0 border-t border-border bg-chrome p-3">
               <label
                 htmlFor="stdin"
