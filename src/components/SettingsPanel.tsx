@@ -39,7 +39,10 @@ export default function SettingsPanel({
       .from("projects")
       .update({ name: name.trim() || project.name, language, entry_file: entry })
       .eq("id", project.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     window.localStorage.setItem(`forge-vm-mem-${project.id}`, String(memory));
     toast.success("Settings saved.");
     void qc.invalidateQueries({ queryKey: ["project", project.id] });

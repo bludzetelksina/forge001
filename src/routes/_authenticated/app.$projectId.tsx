@@ -149,7 +149,7 @@ function Workspace() {
   const [cursor, setCursor] = useState({ anchor: 0, head: 0 });
 
   const spec = project ? languageById(project.language) : null;
-  const isWeb = spec?.runner === null;
+  const isWeb = spec?.id === "web";
 
   /* Who else is in this project, and where their cursor sits. */
   const { user } = useAuth();
@@ -281,6 +281,10 @@ function Workspace() {
     if (!project || !spec) return;
     await flushSaves();
 
+    if (spec.id === "vm") {
+      setPanel("shell");
+      return;
+    }
     if (!spec.runner) {
       setPreviewKey((key) => key + 1);
       setPanel("preview");
