@@ -30,7 +30,7 @@ export const getRegistry = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
       .from("project_registries")
-      .select("id, registry_url, scope, token_ciphertext")
+      .select("id, registry_url, scope, token_ciphertext, kind")
       .eq("project_id", data.projectId)
       .maybeSingle();
     if (!row) return { configured: false as const };
@@ -39,12 +39,13 @@ export const getRegistry = createServerFn({ method: "POST" })
       registryUrl: row.registry_url,
       scope: row.scope,
       hasToken: Boolean(row.token_ciphertext),
+      kind: row.kind === "pypi" ? ("pypi" as const) : ("npm" as const),
     };
   });
 
 export const saveRegistry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; registryUrl: string; scope: string; token: string }) => input)
+  .inputValidator((input: { projectId: string; registryUrl: string; scope: string; token: string; kind?: "npm" | "pypi" }) => input)
   .handler(async ({ data, context }) => {
     await assertRole(context.supabase, data.projectId, context.userId, ["owner"]);
 
@@ -59,6 +60,7 @@ export const saveRegistry = createServerFn({ method: "POST" })
       project_id: data.projectId,
       registry_url: url,
       scope: data.scope.trim() || null,
+      kind: data.kind === "pypi" ? "pypi" : "npm",
       created_by: context.userId,
       ...(token ? { token_ciphertext: encryptSecret(token) } : {}),
     };
