@@ -122,7 +122,10 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
         <Button size="sm" variant="ghost" className="h-6 px-2" aria-label="Restore VM state"
           onClick={async () => {
             const state = await idb<ArrayBuffer | undefined>("readonly", (s) => s.get(projectId));
-            if (!state) return toast.message("No saved state for this project yet.");
+            if (!state) {
+              toast.message("No saved state for this project yet.");
+              return;
+            }
             await emuRef.current?.restore_state(state);
             toast.success("Machine state restored.");
           }}>

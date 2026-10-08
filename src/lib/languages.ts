@@ -10,7 +10,8 @@ export type LanguageId =
   | "ruby"
   | "php"
   | "bash"
-  | "web";
+  | "web"
+  | "vm";
 
 export type TemplateFile = { path: string; content: string };
 
@@ -251,6 +252,36 @@ echo "Hello from bash"
 for i in 1 2 3; do
   echo "line $i"
 done
+`,
+      },
+    ],
+  },
+  {
+    id: "vm",
+    label: "Linux VM",
+    blurb: "Small Linux PC in your browser, user forge / server123",
+    runner: null,
+    entry: "README.md",
+    files: [
+      {
+        path: "README.md",
+        content: `# Linux VM
+
+Open the Shell tool to use a small Linux machine that runs inside your browser.
+
+- User: forge
+- Password: server123
+- 1 CPU, memory set in Settings (up to 1 GB)
+- No internet inside the machine; save a snapshot to keep changes
+`,
+      },
+      {
+        path: "setup.sh",
+        content: `#!/bin/sh
+# Paste lines from here into the Shell tool.
+uname -a
+whoami
+free -m
 `,
       },
     ],

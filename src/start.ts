@@ -23,7 +23,8 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 const customDomainMiddleware = createMiddleware().server(async ({ next }) => {
   const request = getRequest();
   const host = request?.headers.get("host") ?? "";
-  if (request && host && !/(^|\.)(localhost|lovable\.app|lovable\.dev|lovableproject\.com)(:|$)/.test(host)) {
+  const isApi = request ? new URL(request.url).pathname.startsWith("/api/") : false;
+  if (request && host && !isApi && !/(^|\.)(localhost|lovable\.app|lovable\.dev|lovableproject\.com)(:|$)/.test(host)) {
     try {
       const { serveCustomDomain } = await import("./lib/domain-serve.server");
       const response = await serveCustomDomain(request);
