@@ -17,6 +17,7 @@ import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppProjectIdRouteImport } from './routes/_authenticated/app.$projectId'
 import { Route as OauthGithubReturnRouteImport } from './routes/oauth.github.return'
+import { Route as ApiPublicFormsDomainRouteImport } from './routes/api/public/forms.$domain'
 import { Route as ApiPublicRegistrySplatRouteImport } from './routes/api/public/registry.$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const OauthGithubReturnRoute = OauthGithubReturnRouteImport.update({
   path: '/oauth/github/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicFormsDomainRoute = ApiPublicFormsDomainRouteImport.update({
+  id: '/api/public/forms/$domain',
+  path: '/api/public/forms/$domain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicRegistrySplatRoute = ApiPublicRegistrySplatRouteImport.update({
   id: '/api/public/registry/$',
   path: '/api/public/registry/$',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/forms/$domain': typeof ApiPublicFormsDomainRoute
   '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesByTo {
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/api/public/forms/$domain': typeof ApiPublicFormsDomainRoute
   '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRoutesById {
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/forms/$domain': typeof ApiPublicFormsDomainRoute
   '/api/public/registry/$': typeof ApiPublicRegistrySplatRoute
 }
 export interface FileRouteTypes {
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/app/$projectId'
     | '/oauth/github/return'
     | '/app/'
+    | '/api/public/forms/$domain'
     | '/api/public/registry/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/app/$projectId'
     | '/oauth/github/return'
     | '/app'
+    | '/api/public/forms/$domain'
     | '/api/public/registry/$'
   id:
     | '__root__'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/$projectId'
     | '/oauth/github/return'
     | '/_authenticated/app/'
+    | '/api/public/forms/$domain'
     | '/api/public/registry/$'
   fileRoutesById: FileRoutesById
 }
@@ -138,6 +150,7 @@ export interface RootRouteChildren {
   TemplatesRoute: typeof TemplatesRoute
   PSlugRoute: typeof PSlugRoute
   OauthGithubReturnRoute: typeof OauthGithubReturnRoute
+  ApiPublicFormsDomainRoute: typeof ApiPublicFormsDomainRoute
   ApiPublicRegistrySplatRoute: typeof ApiPublicRegistrySplatRoute
 }
 
@@ -199,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthGithubReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/forms/$domain': {
+      id: '/api/public/forms/$domain'
+      path: '/api/public/forms/$domain'
+      fullPath: '/api/public/forms/$domain'
+      preLoaderRoute: typeof ApiPublicFormsDomainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/registry/$': {
       id: '/api/public/registry/$'
       path: '/api/public/registry/$'
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesRoute: TemplatesRoute,
   PSlugRoute: PSlugRoute,
   OauthGithubReturnRoute: OauthGithubReturnRoute,
+  ApiPublicFormsDomainRoute: ApiPublicFormsDomainRoute,
   ApiPublicRegistrySplatRoute: ApiPublicRegistrySplatRoute,
 }
 export const routeTree = rootRouteImport
