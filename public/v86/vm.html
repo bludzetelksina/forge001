@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Forge VM</title>
+<style>html,body{margin:0;background:#000}#screen{display:none}</style></head>
+<body>
+<div id="screen"><div style="white-space:pre;font:14px monospace"></div><canvas></canvas></div>
+<script src="/v86/libv86.js"></script>
+<script>
+  // Runs the in-browser Linux machine in its own page and talks to Forge over postMessage.
+  var params = new URLSearchParams(location.search);
+  var mem = Math.min(1024, Math.max(64, Number(params.get("mem")) || 256));
+  var user = "forge", pass = "server123";
+  var setup = [
+    "adduser -D " + user + " 2>/dev/null || true",
+    "echo '" + user + ":" + pass + "' | chpasswd 2>/dev/null",
+    "export PS1='" + user + "@forge:\\w$ '",
+    "mkdir -p /home/" + user + "; cd /home/" + user + "; clear; echo 'Signed in as " + user + " (password " + pass + ")'"
+  ];
+  var emulator = new V86({
+    wasm_path: "/v86/v86.wasm",
+    memory_size: mem * 1024 * 1024,
+    vga_memory_size: 8 * 1024 * 1024,
+    screen_container: document.getElementById("screen"),
+    bios: { url: "/v86/seabios.bin" },
+    vga_bios: { url: "/v86/vgabios.bin" },
+    bzimage: { url: "/v86/linux.bin", async: false },
+    cmdline: "console=ttyS0 tsc=reliable mitigations=off random.trust_cpu=on",
+    autostart: true,
+    disable_speaker: true
+  });
+  var pending = "", tail = "", done = false;
+  function post(msg) { parent.postMessage(Object.assign({ forgeVm: true }, msg), location.origin); }
+  function runSetup() {
+    if (done) return; done = true;
+    setup.forEach(function (c) { emulator.serial0_send(c + "\n"); });
+    post({ type: "ready" });
+  }
+  emulator.add_listener("serial0-output-byte", function (b) {
+    var ch = String.fromCharCode(b);
+    pending += ch; tail = (tail + ch).slice(-200);
+    if (!done && /[#$%] $/.test(tail)) runSetup();
+  });
+  setInterval(function () { if (pending) { post({ type: "serial", text: pending }); pending = ""; } }, 50);
+  setTimeout(runSetup, 180000);
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin || !e.data || !e.data.forgeVmCmd) return;
+    var d = e.data;
+    if (d.type === "send") emulator.serial0_send(d.text);
+    if (d.type === "restart") emulator.restart();
+    if (d.type === "save") emulator.save_state().then(function (s) { post({ type: "state", state: s }); });
+    if (d.type === "restore" && d.state) emulator.restore_state(d.state);
+  });
+  window.__forgeVm = emulator;
+</script>
+</body></html>
