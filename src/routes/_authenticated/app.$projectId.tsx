@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { listMembers, listPackages, packageUrlFor } from "@/lib/collab";
 import { useProjectPresence } from "@/lib/presence";
+import { useLiveText } from "@/lib/live-doc";
 import { getRegistry } from "@/lib/registry.functions";
 import { editorLanguageFor, languageById } from "@/lib/languages";
 import {
@@ -207,6 +208,12 @@ function Workspace() {
     setOpenIds([entry.id]);
   }, [files, activeId, project?.entry_file]);
 
+  /* Letter-by-letter shared editing of the open file. */
+  const activeFileRow = files.find((f) => f.id === activeId) ?? null;
+  const ytext = useLiveText(activeId, activeFileRow?.content ?? "", canEdit && Boolean(activeFileRow));
+  const liveIdRef = useRef<string | null>(null);
+  liveIdRef.current = ytext ? activeId : null;
+
   /* Live refresh when a collaborator saves. */
   useEffect(() => {
     const channel = supabase
@@ -217,6 +224,7 @@ function Workspace() {
         (payload) => {
           const changed = (payload.new ?? payload.old) as { id?: string } | null;
           if (changed?.id && dirtyRef.current.has(changed.id)) return;
+          if (changed?.id && changed.id === liveIdRef.current) return;
           queryClient.invalidateQueries({ queryKey: ["files", projectId] });
           if (changed?.id && draftsRef.current[changed.id] !== undefined) {
             const next = { ...draftsRef.current };
@@ -224,7 +232,7 @@ function Workspace() {
             draftsRef.current = next;
             setDrafts(next);
           }
-          toast.message("This project was updated by someone else.");
+          if (payload.eventType !== "UPDATE") toast.message("This project was updated by someone else.");
         },
       )
       .subscribe();
@@ -594,7 +602,8 @@ function Workspace() {
                   fallback={<div className="p-4 text-sm text-muted-foreground">Loading editor…</div>}
                 >
                   <CodeEditor
-                    key={activeFile.id}
+                    key={`${activeFile.id}-${ytext ? "live" : "solo"}`}
+                    ytext={ytext}
                     value={contentOf(activeFile)}
                     language={editorLanguageFor(activeFile.path)}
                     readOnly={!canEdit}
