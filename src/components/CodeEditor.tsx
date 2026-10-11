@@ -13,6 +13,8 @@ import { php } from "@codemirror/lang-php";
 import { EditorView, Decoration, WidgetType, type DecorationSet } from "@codemirror/view";
 import { StateEffect, StateField, type Extension } from "@codemirror/state";
 import { useEffect, useMemo, useRef } from "react";
+import { yCollab } from "y-codemirror.next";
+import type * as Y from "yjs";
 
 export type RemoteCursor = { userId: string; name: string; colour: string; anchor: number; head: number };
 
@@ -128,6 +130,7 @@ export default function CodeEditor({
   onChange,
   remoteCursors = [],
   onCursor,
+  ytext = null,
 }: {
   value: string;
   language: string;
@@ -135,14 +138,18 @@ export default function CodeEditor({
   onChange?: (next: string) => void;
   remoteCursors?: RemoteCursor[];
   onCursor?: (range: { anchor: number; head: number }) => void;
+  ytext?: Y.Text | null;
 }) {
   const viewRef = useRef<EditorView | null>(null);
+  // With a shared document, the editor starts from its text once; Yjs keeps it in sync after that.
+  const liveStart = useMemo(() => ytext?.toString() ?? "", [ytext]);
   const cursorRef = useRef(onCursor);
   cursorRef.current = onCursor;
 
   const extensions = useMemo(
     () => [
       ...extensionsFor(language),
+      ...(ytext ? [yCollab(ytext, null)] : []),
       remoteField,
       caretTheme,
       EditorView.updateListener.of((update) => {
@@ -151,7 +158,7 @@ export default function CodeEditor({
         cursorRef.current?.({ anchor: range.anchor, head: range.head });
       }),
     ],
-    [language],
+    [language, ytext],
   );
 
   useEffect(() => {
@@ -162,7 +169,7 @@ export default function CodeEditor({
 
   return (
     <CodeMirror
-      value={value}
+      value={ytext ? liveStart : value}
       height="100%"
       theme={oneDark}
       readOnly={readOnly}

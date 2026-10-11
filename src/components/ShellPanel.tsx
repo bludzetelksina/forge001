@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
-const IMAGE_URL = "https://i.copy.sh/buildroot-bzimage68.bin";
+const IMAGE_URL = "/v86/linux.bin";
 export const VM_USER = "forge";
 export const VM_PASSWORD = "server123";
 
@@ -47,10 +47,11 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
   const [output, setOutput] = useState("");
   const outRef = useRef<HTMLPreElement>(null);
 
-  async function boot() {
+  async function boot(cancelled: () => boolean) {
     if (emuRef.current || !screenRef.current) return;
     setStatus("booting");
     const { V86 } = await import("v86");
+    if (cancelled() || emuRef.current) return;
     const emulator = new V86({
       wasm_path: "/v86/v86.wasm",
       memory_size: memoryMb * 1024 * 1024,
@@ -64,6 +65,7 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
       disable_speaker: true,
     }) as unknown as Emulator;
     emuRef.current = emulator;
+    (window as unknown as { __forgeVm?: unknown }).__forgeVm = emulator;
 
     let buffer = "";
     let setupDone = false;
@@ -71,7 +73,7 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
       const ch = String.fromCharCode(byte as number);
       buffer = (buffer + ch).slice(-200);
       if (ch !== "\r") setOutput((o) => (o + ch).slice(-60_000));
-      if (!setupDone && /[#$] $/.test(buffer)) {
+      if (!setupDone && /[#$%] $/.test(buffer)) {
         setupDone = true;
         for (const cmd of SETUP) emulator.serial0_send(`${cmd}\n`);
         setStatus("ready");
@@ -93,8 +95,13 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
   }, [output]);
 
   useEffect(() => {
-    void boot();
+    let stopped = false;
+    boot(() => stopped).catch((error: Error) => {
+      console.error("vm boot failed", error);
+      setOutput(`The machine could not start: ${error.message}`);
+    });
     return () => {
+      stopped = true;
       void emuRef.current?.destroy();
       emuRef.current = null;
     };
@@ -133,9 +140,9 @@ export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: s
         </Button>
       </div>
       <pre ref={outRef} data-testid="vm-terminal" className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-2 font-mono text-[12px] leading-snug text-foreground">
-        {output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") || "Starting the machine… the first boot downloads about 10 MB."}
+        {output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") || "Starting the machine… this takes up to a minute."}
       </pre>
-      <div ref={screenRef} className="sr-only" aria-hidden>
+      <div ref={screenRef} className="h-0 overflow-hidden" data-testid="vm-screen">
         <div style={{ whiteSpace: "pre", font: "14px monospace", lineHeight: "normal" }} />
         <canvas style={{ display: "none" }} />
       </div>
