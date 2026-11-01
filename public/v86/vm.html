@@ -7,7 +7,7 @@
 <script>
   // Runs the in-browser Linux machine in its own page and talks to Forge over postMessage.
   var params = new URLSearchParams(location.search);
-  var mem = Math.min(1024, Math.max(64, Number(params.get("mem")) || 256));
+  var mem = Math.min(1024, Math.max(64, Number(params.get("mem")) || 1024));
   var user = "forge", pass = "server123";
   var setup = [
     "adduser -D " + user + " 2>/dev/null || true",

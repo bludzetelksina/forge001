@@ -9,6 +9,7 @@
 - [ ] Private registries prefetch for Python/Node sandbox runs
 - [ ] Browser click-through of Git/Domains/Packages tabs
 # 06.10.2026 plan
+- [x] Default Shell memory 1 GB
 - [ ] Linux VM (v86) Shell tool + template, user forge/server123
 - [ ] Workspace tools: Shell, Developer (env vars, run history), Cloud, Settings
 - [ ] Live letter-by-letter co-typing (Yjs)
