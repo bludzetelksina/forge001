@@ -385,10 +385,40 @@ export type Database = {
           },
         ]
       }
+      project_stars: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stars_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
           entry_file: string
+          forked_from: string | null
           id: string
           is_public: boolean
           language: string
@@ -402,6 +432,7 @@ export type Database = {
         Insert: {
           created_at?: string
           entry_file?: string
+          forked_from?: string | null
           id?: string
           is_public?: boolean
           language?: string
@@ -415,6 +446,7 @@ export type Database = {
         Update: {
           created_at?: string
           entry_file?: string
+          forked_from?: string | null
           id?: string
           is_public?: boolean
           language?: string
