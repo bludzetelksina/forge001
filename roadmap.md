@@ -16,3 +16,8 @@
 - [ ] Domain email via shared Resend
 - [ ] Private-registry packages for Python/JS runs
 - [ ] Full browser test
+# 06.11.2026 features
+- [ ] AI assistant panel + explain/fix error
+- [ ] Find in files
+- [ ] Command palette (Ctrl/Cmd+K)
+- [ ] Star & fork public projects + Explore
