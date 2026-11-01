@@ -24,7 +24,7 @@ function idb<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBReq
  * A small Linux machine (v86) running in an isolated page inside the tab.
  * Its serial console is shown here as a text terminal.
  */
-export default function ShellPanel({ projectId, memoryMb = 256 }: { projectId: string; memoryMb?: number }) {
+export default function ShellPanel({ projectId, memoryMb = 1024 }: { projectId: string; memoryMb?: number }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const outRef = useRef<HTMLPreElement>(null);
   const [ready, setReady] = useState(false);

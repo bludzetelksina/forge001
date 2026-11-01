@@ -12,8 +12,8 @@ import { deleteProject, duplicateProject, type FileRow, type ProjectRow } from "
 export const VM_MEMORY_OPTIONS = [128, 256, 512, 1024];
 
 export function vmMemoryFor(projectId: string) {
-  if (typeof window === "undefined") return 256;
-  return Number(window.localStorage.getItem(`forge-vm-mem-${projectId}`)) || 256;
+  if (typeof window === "undefined") return 1024;
+  return Number(window.localStorage.getItem(`forge-vm-mem-${projectId}`)) || 1024;
 }
 
 export default function SettingsPanel({
