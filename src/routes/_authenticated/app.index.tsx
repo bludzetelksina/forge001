@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Globe, Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, Globe, Loader2, Plus, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ import {
   createProjectFromTemplate,
   deleteProject,
   duplicateProject,
+  listExplore,
   listProjectsWithRole,
 } from "@/lib/projects";
 
@@ -41,6 +42,7 @@ function Dashboard() {
   const [language, setLanguage] = useState<LanguageId>("python");
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: listProjectsWithRole });
+  const explore = useQuery({ queryKey: ["explore"], queryFn: () => listExplore() });
   const owned = (projects.data ?? []).filter((p) => p.role === "owner");
   const shared = (projects.data ?? []).filter((p) => p.role !== "owner");
 
@@ -200,6 +202,25 @@ function Dashboard() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {languageById(project.language).label} ·{" "}
                       {new Date(project.updated_at).toLocaleDateString()}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {(explore.data ?? []).length > 0 ? (
+          <div className="mt-12">
+            <h2 className="text-lg font-bold">Explore</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Popular public projects. Open one to star or fork it.</p>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {explore.data!.map((project) => (
+                <li key={project.id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50">
+                  <Link to="/p/$slug" params={{ slug: project.share_slug }} className="block">
+                    <h3 className="truncate font-mono text-sm font-semibold">{project.name}</h3>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      {languageById(project.language).label} · <Star className="size-3" /> {project.stars} · {project.run_count} runs
                     </p>
                   </Link>
                 </li>
