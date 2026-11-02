@@ -16,6 +16,16 @@ import { ClientOnly } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import CloudPanel from "@/components/CloudPanel";
+import AssistantPanel from "@/components/AssistantPanel";
+import SearchPanel from "@/components/SearchPanel";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import DeveloperPanel, { listEnv } from "@/components/DeveloperPanel";
 import SettingsPanel, { vmMemoryFor } from "@/components/SettingsPanel";
 import FileTree from "@/components/FileTree";
@@ -56,8 +66,8 @@ import { runCode, type RunResult } from "@/lib/run.functions";
 const CodeEditor = lazy(() => import("@/components/CodeEditor"));
 const ShellPanel = lazy(() => import("@/components/ShellPanel"));
 
-type Tool = "console" | "preview" | "shell" | "developer" | "cloud" | "settings";
-const TOOLS: Tool[] = ["console", "preview", "shell", "developer", "cloud", "settings"];
+type Tool = "console" | "preview" | "assistant" | "shell" | "developer" | "cloud" | "settings";
+const TOOLS: Tool[] = ["console", "preview", "assistant", "shell", "developer", "cloud", "settings"];
 
 export const Route = createFileRoute("/_authenticated/app/$projectId")({
   head: () => ({
@@ -73,7 +83,7 @@ export const Route = createFileRoute("/_authenticated/app/$projectId")({
   component: Workspace,
 });
 
-type SidePanel = "files" | "packages" | "members" | "git";
+type SidePanel = "files" | "search" | "packages" | "members" | "git";
 
 
 function Workspace() {
@@ -144,6 +154,8 @@ function Workspace() {
     if (panel === "shell") setShellStarted(true);
   }, [panel]);
   const [side, setSide] = useState<SidePanel>("files");
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState<{ text: string; id: number } | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nameDraft, setNameDraft] = useState("");
@@ -360,6 +372,10 @@ function Workspace() {
     function onKey(event: KeyboardEvent) {
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
+      if (event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
       if (event.key === "s") {
         event.preventDefault();
         void flushSaves();
@@ -416,8 +432,56 @@ function Workspace() {
 
   const memberCount = membersQuery.data?.length ?? 0;
 
+  function askAi(text: string) {
+    setAiPrompt({ text, id: Date.now() });
+    setPanel("assistant");
+  }
+
+  async function applyAiFile(path: string, content: string) {
+    if (!canEdit) throw new Error("You can only view this project.");
+    const existing = files.find((f) => f.path === path);
+    if (existing) {
+      handleChange(existing.id, content);
+      await flushSaves();
+      openFile(existing);
+    } else {
+      const created = await createFile(projectId, path, files.length);
+      await saveFile(created.id, content);
+      await queryClient.invalidateQueries({ queryKey: ["files", projectId] });
+      openFile({ ...created, content });
+    }
+  }
+
+  const paletteGo = (fn: () => void) => { setPaletteOpen(false); fn(); };
+
   return (
     <div className="flex h-screen flex-col bg-background">
+      <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>
+        <CommandInput placeholder="Type a command or file name…" />
+        <CommandList>
+          <CommandEmpty>Nothing found.</CommandEmpty>
+          <CommandGroup heading="Actions">
+            <CommandItem onSelect={() => paletteGo(() => void doRun())}>Run project</CommandItem>
+            <CommandItem onSelect={() => paletteGo(() => { setSidebarOpen(true); setSide("search"); })}>Find in files</CommandItem>
+            {canEdit ? (
+              <CommandItem onSelect={() => paletteGo(() => {
+                const path = prompt("New file name");
+                if (path?.trim()) void withRefresh(async () => openFile(await createFile(projectId, path.trim(), files.length)));
+              })}>New file</CommandItem>
+            ) : null}
+          </CommandGroup>
+          <CommandGroup heading="Tools">
+            {TOOLS.filter((t) => t !== "preview" || isWeb).map((t) => (
+              <CommandItem key={t} onSelect={() => paletteGo(() => setPanel(t))} className="capitalize">Open {t}</CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Files">
+            {files.map((f) => (
+              <CommandItem key={f.id} value={`file ${f.path}`} onSelect={() => paletteGo(() => openFile(f))} className="font-mono">{f.path}</CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-chrome px-3 sm:gap-3">
         <Button asChild size="icon" variant="ghost" aria-label="Back to projects">
           <Link to="/app">
@@ -493,7 +557,7 @@ function Workspace() {
         {sidebarOpen ? (
           <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
             <div className="flex items-stretch overflow-x-auto border-b border-border">
-              {(["files", "packages", "members", "git"] as SidePanel[]).map((tab) => (
+              {(["files", "search", "packages", "members", "git"] as SidePanel[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -550,6 +614,16 @@ function Workspace() {
                     })
                   }
                   onSetEntry={(file) => void withRefresh(() => setEntryFile(projectId, file.path))}
+                />
+              ) : side === "search" ? (
+                <SearchPanel
+                  files={files.map((f) => ({ id: f.id, path: f.path, content: contentOf(f) }))}
+                  canEdit={canEdit}
+                  onOpen={(id) => { const f = files.find((x) => x.id === id); if (f) openFile(f); }}
+                  onReplace={(changes) => {
+                    changes.forEach((c) => handleChange(c.id, c.content));
+                    toast.success(`Replaced in ${changes.length} file(s).`);
+                  }}
                 />
               ) : side === "packages" ? (
                 <PackagesPanel
@@ -658,7 +732,16 @@ function Workspace() {
                 }))}
               />
             ) : panel === "console" ? (
-              <OutputConsole result={result} running={running} />
+              <OutputConsole result={result} running={running}
+                onAsk={(mode) => askAi(`${mode === "fix" ? "Fix" : "Explain"} this error from running ${project.entry_file}:\n\n${result?.stderr ?? ""}`)} />
+            ) : panel === "assistant" ? (
+              <AssistantPanel
+                files={files.map((f) => ({ path: f.path, content: contentOf(f) }))}
+                language={project.language}
+                canEdit={canEdit}
+                prompt={aiPrompt}
+                onApply={applyAiFile}
+              />
             ) : panel === "developer" ? (
               <DeveloperPanel projectId={projectId} canEdit={canEdit} result={result} running={running} />
             ) : panel === "cloud" ? (

@@ -1,17 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ClientOnly } from "@tanstack/react-router";
-import { Loader2, Play } from "lucide-react";
+import { GitFork, Loader2, Play, Star } from "lucide-react";
 import { Suspense, lazy, useState } from "react";
+import { toast } from "sonner";
 
 import OutputConsole from "@/components/OutputConsole";
 import WebPreview from "@/components/WebPreview";
 import SiteHeader from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { cdnUrlFor, listPackages } from "@/lib/collab";
 import { editorLanguageFor, languageById } from "@/lib/languages";
-import { getProjectBySlug, listFiles, type FileRow } from "@/lib/projects";
+import { forkProject, getProjectBySlug, getStars, listFiles, toggleStar, type FileRow } from "@/lib/projects";
 import { runCode, type RunResult } from "@/lib/run.functions";
 
 const CodeEditor = lazy(() => import("@/components/CodeEditor"));
@@ -41,6 +43,13 @@ function SharedProject() {
     retry: false,
   });
   const project = projectQuery.data;
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const starsQuery = useQuery({
+    queryKey: ["stars", project?.id, user?.id],
+    queryFn: () => getStars(project!.id),
+    enabled: Boolean(project?.id),
+  });
 
   const filesQuery = useQuery({
     queryKey: ["shared-files", project?.id],
@@ -115,6 +124,34 @@ function SharedProject() {
               {spec?.label}
             </span>
             <span className="text-xs text-muted-foreground">read-only</span>
+            <div className="ml-auto flex gap-2">
+              <Button size="sm" variant="secondary" aria-label="Star project"
+                onClick={async () => {
+                  if (!user) return navigate({ to: "/auth" });
+                  try {
+                    await toggleStar(project.id, starsQuery.data?.starred ?? false);
+                    void starsQuery.refetch();
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}>
+                <Star className={`size-4 ${starsQuery.data?.starred ? "fill-primary text-primary" : ""}`} />
+                {starsQuery.data?.count ?? 0}
+              </Button>
+              <Button size="sm" variant="secondary"
+                onClick={async () => {
+                  if (!user) return navigate({ to: "/auth" });
+                  try {
+                    const copy = await forkProject(project.id);
+                    toast.success("Forked into your projects.");
+                    navigate({ to: "/app/$projectId", params: { projectId: copy.id } });
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}>
+                <GitFork className="size-4" /> {user ? "Fork" : "Sign in to fork"}
+              </Button>
+            </div>
             {spec?.runner ? (
               <Button size="sm" className="ml-auto" onClick={() => void doRun()} disabled={running}>
                 {running ? (

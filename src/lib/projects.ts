@@ -290,3 +290,45 @@ export async function recordRun(input: {
     .update({ run_count: input.runCount + 1 })
     .eq("id", input.projectId);
 }
+
+/* ---------- Stars & forks ---------- */
+
+export async function forkProject(projectId: string): Promise<ProjectRow> {
+  const copy = await duplicateProject(projectId);
+  const source = await getProject(projectId);
+  await supabase.from("projects").update({ name: source.name, forked_from: projectId }).eq("id", copy.id);
+  return { ...copy, name: source.name };
+}
+
+export async function getStars(projectId: string) {
+  const { data: auth } = await supabase.auth.getUser();
+  const { data, error } = await supabase.from("project_stars").select("user_id").eq("project_id", projectId);
+  if (error) throw error;
+  const rows = data ?? [];
+  return { count: rows.length, starred: Boolean(auth.user && rows.some((r) => r.user_id === auth.user!.id)) };
+}
+
+export async function toggleStar(projectId: string, starred: boolean) {
+  const userId = await requireUserId();
+  const { error } = starred
+    ? await supabase.from("project_stars").delete().eq("project_id", projectId).eq("user_id", userId)
+    : await supabase.from("project_stars").insert({ project_id: projectId, user_id: userId });
+  if (error) throw error;
+}
+
+export type ExploreProject = ProjectRow & { stars: number };
+
+/** Popular public projects, most-starred first. */
+export async function listExplore(limit = 12): Promise<ExploreProject[]> {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*, project_stars(count)")
+    .eq("is_public", true)
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return ((data ?? []) as (ProjectRow & { project_stars: { count: number }[] })[])
+    .map(({ project_stars, ...p }) => ({ ...p, stars: project_stars?.[0]?.count ?? 0 }))
+    .sort((a, b) => b.stars - a.stars || b.run_count - a.run_count)
+    .slice(0, limit);
+}

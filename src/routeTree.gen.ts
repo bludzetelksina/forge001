@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TemplatesRouteImport } from './routes/templates'
+import { Route as ApiAiAssistRouteImport } from './routes/api/ai-assist'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppProjectIdRouteImport } from './routes/_authenticated/app.$projectId'
@@ -37,6 +38,11 @@ const AuthRoute = AuthRouteImport.update({
 const TemplatesRoute = TemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiAssistRoute = ApiAiAssistRouteImport.update({
+  id: '/api/ai-assist',
+  path: '/api/ai-assist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PSlugRoute = PSlugRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/templates': typeof TemplatesRoute
+  '/api/ai-assist': typeof ApiAiAssistRoute
   '/p/$slug': typeof PSlugRoute
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/templates': typeof TemplatesRoute
+  '/api/ai-assist': typeof ApiAiAssistRoute
   '/p/$slug': typeof PSlugRoute
   '/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/templates': typeof TemplatesRoute
+  '/api/ai-assist': typeof ApiAiAssistRoute
   '/p/$slug': typeof PSlugRoute
   '/_authenticated/app/$projectId': typeof AuthenticatedAppProjectIdRoute
   '/oauth/github/return': typeof OauthGithubReturnRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/templates'
+    | '/api/ai-assist'
     | '/p/$slug'
     | '/app/$projectId'
     | '/oauth/github/return'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/templates'
+    | '/api/ai-assist'
     | '/p/$slug'
     | '/app/$projectId'
     | '/oauth/github/return'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/templates'
+    | '/api/ai-assist'
     | '/p/$slug'
     | '/_authenticated/app/$projectId'
     | '/oauth/github/return'
@@ -148,6 +160,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   TemplatesRoute: typeof TemplatesRoute
+  ApiAiAssistRoute: typeof ApiAiAssistRoute
   PSlugRoute: typeof PSlugRoute
   OauthGithubReturnRoute: typeof OauthGithubReturnRoute
   ApiPublicFormsDomainRoute: typeof ApiPublicFormsDomainRoute
@@ -182,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/templates'
       fullPath: '/templates'
       preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai-assist': {
+      id: '/api/ai-assist'
+      path: '/api/ai-assist'
+      fullPath: '/api/ai-assist'
+      preLoaderRoute: typeof ApiAiAssistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$slug': {
@@ -247,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   TemplatesRoute: TemplatesRoute,
+  ApiAiAssistRoute: ApiAiAssistRoute,
   PSlugRoute: PSlugRoute,
   OauthGithubReturnRoute: OauthGithubReturnRoute,
   ApiPublicFormsDomainRoute: ApiPublicFormsDomainRoute,
