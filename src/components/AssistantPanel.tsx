@@ -35,7 +35,9 @@ export default function AssistantPanel({
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [messages]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [messages]);
   useEffect(() => {
     if (prompt) void ask(prompt.text);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -295,7 +295,11 @@ function Workspace() {
     [flushSaves, canEdit],
   );
 
-  useEffect(() => () => void flushSaves(), [flushSaves]);
+  useEffect(() => {
+    return () => {
+      void flushSaves();
+    };
+  }, [flushSaves]);
 
   const doRun = useCallback(async () => {
     if (!project || !spec) return;
