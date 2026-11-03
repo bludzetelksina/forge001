@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggle, WhatsNewLink, WhatsNewPopup } from "@/components/WhatsNew";
 
 export function Logo() {
   return (
@@ -41,9 +42,12 @@ export default function SiteHeader() {
               My projects
             </Link>
           ) : null}
+          <WhatsNewLink />
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          {user ? <WhatsNewPopup /> : null}
           {loading ? null : user ? (
             <>
               <span className="hidden max-w-40 truncate font-mono text-xs text-muted-foreground md:inline">
