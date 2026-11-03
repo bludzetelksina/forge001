@@ -62,6 +62,9 @@ import {
   type FileRow,
 } from "@/lib/projects";
 import { runCode, type RunResult } from "@/lib/run.functions";
+import { createSnapshot } from "@/lib/snapshots";
+import { formatCode, formatParserFor } from "@/lib/format";
+import { ShortcutsSheet, ThemeToggle } from "@/components/WhatsNew";
 
 const CodeEditor = lazy(() => import("@/components/CodeEditor"));
 const ShellPanel = lazy(() => import("@/components/ShellPanel"));
@@ -155,6 +158,7 @@ function Workspace() {
   }, [panel]);
   const [side, setSide] = useState<SidePanel>("files");
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState<{ text: string; id: number } | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -301,9 +305,44 @@ function Workspace() {
     };
   }, [flushSaves]);
 
+  const takeSnapshot = useCallback(
+    async (label: string) => {
+      if (!canEdit || files.length === 0) return;
+      try {
+        await createSnapshot(projectId, files.map((f) => ({ path: f.path, content: contentOf(f) })), label);
+        void queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+      } catch {
+        /* snapshots are best-effort */
+      }
+    },
+    [canEdit, files, projectId, contentOf, queryClient],
+  );
+  const snapRef = useRef(takeSnapshot);
+  snapRef.current = takeSnapshot;
+  useEffect(() => {
+    const t = window.setInterval(() => void snapRef.current("Auto (10 min)"), 10 * 60 * 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const formatActive = useCallback(async () => {
+    const f = files.find((x) => x.id === activeId);
+    if (!f || !canEdit) return;
+    if (!formatParserFor(f.path)) {
+      toast.info("Formatting isn't available for this file type.");
+      return;
+    }
+    try {
+      const out = await formatCode(f.path, contentOf(f));
+      if (out != null) { handleChange(f.id, out); toast.success("Formatted."); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message.split("\n")[0] : "Could not format this file.");
+    }
+  }, [files, activeId, canEdit, contentOf, handleChange]);
+
   const doRun = useCallback(async () => {
     if (!project || !spec) return;
     await flushSaves();
+    void snapRef.current("Run");
 
     if (spec.id === "vm") {
       setPanel("shell");
@@ -374,6 +413,18 @@ function Workspace() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing = !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      if (event.shiftKey && event.altKey && event.code === "KeyF") {
+        event.preventDefault();
+        void formatActive();
+        return;
+      }
+      if (event.key === "?" && !typing) {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
       const mod = event.metaKey || event.ctrlKey;
       if (!mod) return;
       if (event.key.toLowerCase() === "k") {
@@ -391,7 +442,7 @@ function Workspace() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doRun, flushSaves]);
+  }, [doRun, flushSaves, formatActive]);
 
   if (projectQuery.isError) {
     return (
@@ -460,12 +511,15 @@ function Workspace() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
+      <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>
         <CommandInput placeholder="Type a command or file name…" />
         <CommandList>
           <CommandEmpty>Nothing found.</CommandEmpty>
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => paletteGo(() => void doRun())}>Run project</CommandItem>
+            <CommandItem onSelect={() => paletteGo(() => void formatActive())}>Format file</CommandItem>
+            <CommandItem onSelect={() => paletteGo(() => setShortcutsOpen(true))}>Keyboard shortcuts</CommandItem>
             <CommandItem onSelect={() => paletteGo(() => { setSidebarOpen(true); setSide("search"); })}>Find in files</CommandItem>
             {canEdit ? (
               <CommandItem onSelect={() => paletteGo(() => {
@@ -550,6 +604,12 @@ function Workspace() {
             </label>
           ) : null}
 
+          <ThemeToggle />
+          {canEdit && activeFile && formatParserFor(activeFile.path) ? (
+            <Button onClick={() => void formatActive()} size="sm" variant="ghost" title="Format file (Shift+Alt+F)">
+              Format
+            </Button>
+          ) : null}
           <Button onClick={() => void doRun()} disabled={running} size="sm">
             {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             Run
