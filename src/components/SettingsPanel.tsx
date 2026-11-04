@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/lib/languages";
+import { listSnapshots, restoreSnapshot, type SnapshotRow } from "@/lib/snapshots";
 import { deleteProject, duplicateProject, type FileRow, type ProjectRow } from "@/lib/projects";
 
 export const VM_MEMORY_OPTIONS = [128, 256, 512, 1024];
@@ -78,6 +79,8 @@ export default function SettingsPanel({
       </div>
       {canEdit ? <Button size="sm" onClick={() => void save()}>Save settings</Button> : null}
 
+      <VersionHistory projectId={project.id} files={files} canEdit={canEdit} />
+
       <div className="flex gap-2 border-t border-border pt-4">
         <Button size="sm" variant="secondary"
           onClick={async () => {
@@ -98,6 +101,55 @@ export default function SettingsPanel({
           </Button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function VersionHistory({ projectId, files, canEdit }: { projectId: string; files: FileRow[]; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["snapshots", projectId], queryFn: () => listSnapshots(projectId) });
+  const [preview, setPreview] = useState<SnapshotRow | null>(null);
+
+  async function restore(snap: SnapshotRow) {
+    if (!confirm("Restore this version? Current file contents will be replaced.")) return;
+    try {
+      await restoreSnapshot(projectId, snap, files);
+      await qc.invalidateQueries({ queryKey: ["files", projectId] });
+      toast.success("Version restored.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not restore.");
+    }
+  }
+
+  return (
+    <div className="space-y-2 border-t border-border pt-4">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Version history</p>
+      <p className="text-xs text-muted-foreground">Saved on every Run and every 10 minutes. Last 30 kept.</p>
+      {q.data?.length ? (
+        <ul className="divide-y divide-border rounded-md border border-border">
+          {q.data.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 px-2 py-1.5 font-mono text-xs">
+              <span className="flex-1 truncate">{new Date(s.created_at).toLocaleString()} · {s.label} · {s.files.length} files</span>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setPreview(preview?.id === s.id ? null : s)}>
+                {preview?.id === s.id ? "Hide" : "Preview"}
+              </Button>
+              {canEdit ? <Button size="sm" variant="secondary" className="h-6 px-2 text-xs" onClick={() => void restore(s)}>Restore</Button> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground">{q.isLoading ? "Loading…" : "No versions yet — press Run to save one."}</p>
+      )}
+      {preview ? (
+        <div className="max-h-64 space-y-2 overflow-auto rounded-md border border-border p-2">
+          {preview.files.map((f) => (
+            <div key={f.path}>
+              <p className="font-mono text-[10px] text-primary">{f.path}</p>
+              <pre className="whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">{f.content.slice(0, 2000)}</pre>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
