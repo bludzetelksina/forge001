@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Release notes live in a static `src/lib/changelog.ts` list (newest first); add an entry per release — no database needed for static copy.

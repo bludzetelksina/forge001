@@ -21,3 +21,9 @@
 - [x] Find in files
 - [x] Command palette (Ctrl/Cmd+K)
 - [x] Star & fork public projects + Explore
+# 13.11.2026 what's new
+- [x] What's new page, header dot and one-time popup
+- [x] Version history (snapshots on Run + every 10 min, restore in Settings)
+- [x] Format file (Shift+Alt+F)
+- [x] Light/dark theme toggle
+- [x] Keyboard shortcuts sheet (?)

@@ -64,7 +64,7 @@ export const RELEASES: Release[] = [
   },
 ];
 
-export const LATEST_RELEASE = RELEASES[0];
+export const LATEST_RELEASE: Release = RELEASES[0]!;
 export const SEEN_KEY = "forge-seen-release";
 
 export function hasUnseen(seenId: string | null) {
