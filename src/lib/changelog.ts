@@ -3,6 +3,16 @@ export type Release = { id: string; date: string; title: string; items: string[]
 /** Newest first. */
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-20",
+    date: "20 Nov 2026",
+    title: "Split editor, README and ZIP download",
+    items: [
+      "Split editor: open a second file side by side (Split button or command palette).",
+      "README.md is shown on the public share page.",
+      "Download a whole project as a ZIP from Settings or the command palette.",
+    ],
+  },
+  {
     id: "2026-11-13",
     date: "13 Nov 2026",
     title: "Version history, formatting & light theme",

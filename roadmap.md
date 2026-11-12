@@ -27,3 +27,9 @@
 - [x] Format file (Shift+Alt+F)
 - [x] Light/dark theme toggle
 - [x] Keyboard shortcuts sheet (?)
+
+## 20 Nov 2026
+- [x] What's new entry, split editor, README on share page, ZIP download
+- [x] Run with input (already existed in the Run area)
+- [ ] Project tags + filter — blocked: database unreachable
+- [ ] Profiles privacy fix — blocked: database unreachable

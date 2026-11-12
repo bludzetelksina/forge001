@@ -1,3 +1,4 @@
+import { downloadZip } from "@/lib/zip";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -88,6 +89,9 @@ export default function SettingsPanel({
             navigate({ to: "/app/$projectId", params: { projectId: copy.id } });
           }}>
           Duplicate project
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => downloadZip(project.name, files)}>
+          Download ZIP
         </Button>
         {isOwner ? (
           <Button size="sm" variant="destructive"

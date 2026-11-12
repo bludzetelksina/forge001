@@ -1,3 +1,4 @@
+import { downloadZip } from "@/lib/zip";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -145,6 +146,7 @@ function Workspace() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [stdin, setStdin] = useState("");
+  const [splitId, setSplitId] = useState<string | null>(null);
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const panel: Tool = search.tool ?? "console";
@@ -466,6 +468,7 @@ function Workspace() {
   }
 
   const activeFile = files.find((f) => f.id === activeId) ?? null;
+  const splitFile = splitId ? files.find((f) => f.id === splitId) ?? null : null;
   const openFiles = openIds
     .map((id) => files.find((f) => f.id === id))
     .filter((f): f is FileRow => Boolean(f));
@@ -520,6 +523,8 @@ function Workspace() {
             <CommandItem onSelect={() => paletteGo(() => void doRun())}>Run project</CommandItem>
             <CommandItem onSelect={() => paletteGo(() => void formatActive())}>Format file</CommandItem>
             <CommandItem onSelect={() => paletteGo(() => setShortcutsOpen(true))}>Keyboard shortcuts</CommandItem>
+            <CommandItem onSelect={() => paletteGo(() => downloadZip(project.name, files.map((f) => ({ path: f.path, content: contentOf(f) }))))}>Download project as ZIP</CommandItem>
+            <CommandItem onSelect={() => paletteGo(() => setSplitId(activeId))}>Split editor</CommandItem>
             <CommandItem onSelect={() => paletteGo(() => { setSidebarOpen(true); setSide("search"); })}>Find in files</CommandItem>
             {canEdit ? (
               <CommandItem onSelect={() => paletteGo(() => {
@@ -731,9 +736,13 @@ function Workspace() {
                 {file.path}
               </button>
             ))}
+            {activeFile && !splitFile ? (
+              <button type="button" className="ml-auto px-3 font-mono text-xs text-muted-foreground hover:text-foreground" onClick={() => setSplitId(activeId)}>Split</button>
+            ) : null}
           </div>
 
-          <div className="min-h-0 flex-1 bg-editor">
+          <div className="flex min-h-0 flex-1">
+          <div className="min-h-0 min-w-0 flex-1 bg-editor">
             {activeFile ? (
               <ClientOnly fallback={<div className="p-4 text-sm text-muted-foreground">Loading editor…</div>}>
                 <Suspense
@@ -754,6 +763,30 @@ function Workspace() {
             ) : (
               <p className="p-4 text-sm text-muted-foreground">Select a file to start editing.</p>
             )}
+          </div>
+          {splitFile ? (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-border bg-editor" style={{ resize: "horizontal", overflow: "auto" }}>
+              <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border bg-chrome px-2">
+                <select aria-label="Split file" className="bg-transparent font-mono text-xs" value={splitFile.id} onChange={(e) => setSplitId(e.target.value)}>
+                  {files.map((f) => <option key={f.id} value={f.id}>{f.path}</option>)}
+                </select>
+                <button type="button" aria-label="Close split" className="ml-auto font-mono text-xs text-muted-foreground hover:text-foreground" onClick={() => setSplitId(null)}>×</button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <ClientOnly fallback={null}>
+                  <Suspense fallback={null}>
+                    <CodeEditor
+                      key={`split-${splitFile.id}`}
+                      value={contentOf(splitFile)}
+                      language={editorLanguageFor(splitFile.path)}
+                      readOnly={!canEdit || splitFile.id === activeId}
+                      onChange={(next) => handleChange(splitFile.id, next)}
+                    />
+                  </Suspense>
+                </ClientOnly>
+              </div>
+            </div>
+          ) : null}
           </div>
         </section>
 
