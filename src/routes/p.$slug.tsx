@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+import { findReadme } from "@/lib/zip";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -214,6 +216,14 @@ function SharedProject() {
               )}
             </div>
           </div>
+          {(() => {
+            const readme = findReadme(files);
+            return readme ? (
+              <article className="prose-sm mt-6 max-w-none rounded-md border border-border bg-card p-4 text-sm [&_a]:text-primary [&_code]:font-mono [&_h1]:text-lg [&_h1]:font-bold [&_h2]:font-semibold [&_li]:ml-4 [&_li]:list-disc [&_p]:my-2">
+                <ReactMarkdown>{readme.content}</ReactMarkdown>
+              </article>
+            ) : null;
+          })()}
         </main>
       )}
     </div>
